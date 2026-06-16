@@ -135,6 +135,11 @@ class PlayController {
 	};
 
 	play = async (data: Record<string, any>, instantPlay = false): Promise<void> => {
+		const entity = this.getPlayService(data, true);
+		await this.playToEntity(data, entity, instantPlay);
+	};
+
+	playToEntity = async (data: Record<string, any>, entity: Record<string, string>, instantPlay = false): Promise<void> => {
 		if (_.isArray(this.runBefore)) {
 			const entityID = `${this.runBefore[0]}.${this.runBefore[1]}`;
 			await this.hass.callService(this.runBefore[0], this.runBefore[1], {});
@@ -144,7 +149,6 @@ class PlayController {
 				await waitUntilState(this.hass, entityID, 'off');
 			}
 		}
-		const entity = this.getPlayService(data, true);
 
 		let processData = data;
 		let provider;
@@ -260,6 +264,42 @@ class PlayController {
 		if (_.isArray(this.runAfter)) {
 			await this.hass.callService(this.runAfter[0], this.runAfter[1], {});
 		}
+	};
+
+	getAllPlayServices = (data: Record<string, any>): Array<Record<string, string>> => {
+		const services: Array<Record<string, string>> = [];
+		_.forEach(this.entity, (value, key) => {
+			const entities = this.exportEntity(value, key);
+			_.forEach(entities, entity => {
+				if (_.includes(this.supported[entity.key], data.type)) {
+					if (
+						(entity.key === 'kodi' && this.isKodiSupported(entity.value)) ||
+						(entity.key === 'androidtv' && this.isAndroidTVSupported(entity.value)) ||
+						(entity.key === 'plexPlayer' && this.isPlexPlayerSupported(entity.value)) ||
+						(entity.key === 'cast' && this.isCastSupported(entity.value)) ||
+						(entity.key === 'vlcTelnet' && this.isVLCTelnetSupported(entity.value)) ||
+						(entity.key === 'sonos' && this.isSonosSupported(entity.value))
+					) {
+						services.push({ key: entity.key, value: entity.value });
+					}
+				}
+			});
+		});
+		return services;
+	};
+
+	getEntityLabel = (entity: Record<string, string>): string => {
+		if (entity.key === 'plexPlayer') {
+			const clients: Array<any> = (this.plex as any).clients || [];
+			const client = clients.find((c: any) =>
+				c.machineIdentifier === entity.value ||
+				c.name === entity.value ||
+				c.product === entity.value
+			);
+			return client ? client.name : entity.value;
+		}
+		const state = this.hass.states[entity.value];
+		return (state && state.attributes && state.attributes.friendly_name) ? state.attributes.friendly_name : entity.value;
 	};
 
 	private plexPlayerCreateQueue = async (

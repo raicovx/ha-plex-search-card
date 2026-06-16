@@ -1237,6 +1237,14 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 				#${MODAL_ID} .pmEpTitle { font-size: 12px; color: white; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
 				#${MODAL_ID} .pmEpNum { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+				#${MODAL_ID} .pmDevicePicker { display: none; flex-direction: column; gap: 6px; margin-top: 10px; }
+				#${MODAL_ID} .pmDevicePicker.open { display: flex; }
+				#${MODAL_ID} .pmDeviceBtn {
+					padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.25);
+					background: rgba(255,255,255,0.08); color: white; font-size: 13px;
+					cursor: pointer; text-align: left; transition: background 0.15s;
+				}
+				#${MODAL_ID} .pmDeviceBtn:hover { background: rgba(255,255,255,0.18); border-color: white; }
 				#${MODAL_ID} .pmSpinner { padding: 20px; display: flex; justify-content: center; }
 				#${MODAL_ID} .lds-ring { display: inline-block; position: relative; width: 40px; height: 40px; }
 				#${MODAL_ID} .lds-ring div {
@@ -1385,12 +1393,41 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		actionsElem.innerHTML = '';
 		if (this.playController) {
 			this.playController.setPlayActionButtonType(data.type);
-			const playActionBtn = this.playController.getPlayActionButton();
-			playActionBtn.addEventListener('click', (e: MouseEvent) => {
-				e.stopPropagation();
-				if (this.playController) this.playController.play(data, true);
-			});
-			actionsElem.appendChild(playActionBtn);
+			const services = this.playController.getAllPlayServices(data);
+
+			if (services.length <= 1) {
+				const playActionBtn = this.playController.getPlayActionButton();
+				playActionBtn.addEventListener('click', (e: MouseEvent) => {
+					e.stopPropagation();
+					if (this.playController) this.playController.play(data, true);
+				});
+				actionsElem.appendChild(playActionBtn);
+			} else {
+				const playActionBtn = this.playController.getPlayActionButton();
+				const devicePicker = document.createElement('div');
+				devicePicker.className = 'pmDevicePicker';
+
+				_.forEach(services, service => {
+					if (!this.playController) return;
+					const label = this.playController.getEntityLabel(service);
+					const btn = document.createElement('button');
+					btn.className = 'pmDeviceBtn';
+					btn.innerHTML = escapeHtml(label);
+					btn.addEventListener('click', (e: MouseEvent) => {
+						e.stopPropagation();
+						if (this.playController) this.playController.playToEntity(data, service, true);
+						devicePicker.classList.remove('open');
+					});
+					devicePicker.appendChild(btn);
+				});
+
+				playActionBtn.addEventListener('click', (e: MouseEvent) => {
+					e.stopPropagation();
+					devicePicker.classList.toggle('open');
+				});
+				actionsElem.appendChild(playActionBtn);
+				actionsElem.appendChild(devicePicker);
+			}
 		}
 
 		modal.classList.add('active');
@@ -1475,7 +1512,11 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			(thumbImg as any).loading = 'lazy';
 			thumbDiv.appendChild(thumbImg);
 
+			const epDevicePicker = document.createElement('div');
+			epDevicePicker.className = 'pmDevicePicker';
+
 			if (this.playController) {
+				const services = this.playController.getAllPlayServices(ep);
 				const area = document.createElement('div');
 				area.className = 'interactiveArea';
 				const btn = this.playController.getPlayButton(ep.type);
@@ -1484,10 +1525,31 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 				btn.addEventListener('click', (e: MouseEvent) => {
 					e.stopPropagation();
-					if (this.playController) this.playController.play(ep, true);
+					if (!this.playController) return;
+					if (services.length <= 1) {
+						this.playController.play(ep, true);
+					} else {
+						epDevicePicker.classList.toggle('open');
+					}
 				});
 				area.appendChild(btn);
 				thumbDiv.appendChild(area);
+
+				if (services.length > 1) {
+					_.forEach(services, service => {
+						if (!this.playController) return;
+						const label = this.playController.getEntityLabel(service);
+						const devBtn = document.createElement('button');
+						devBtn.className = 'pmDeviceBtn';
+						devBtn.innerHTML = escapeHtml(label);
+						devBtn.addEventListener('click', (e: MouseEvent) => {
+							e.stopPropagation();
+							if (this.playController) this.playController.playToEntity(ep, service, true);
+							epDevicePicker.classList.remove('open');
+						});
+						epDevicePicker.appendChild(devBtn);
+					});
+				}
 			}
 
 			card.appendChild(thumbDiv);
@@ -1505,6 +1567,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				numDiv.innerHTML = escapeHtml(ep.subtype);
 			}
 			card.appendChild(numDiv);
+			card.appendChild(epDevicePicker);
 
 			container.appendChild(card);
 		});
