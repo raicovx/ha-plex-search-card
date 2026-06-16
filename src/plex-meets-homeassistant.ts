@@ -1120,65 +1120,192 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 	};
 
 	createPlexModal = (): void => {
-		if (this.plexModalElem) {
-			this.plexModalElem.remove();
+		const MODAL_ID = 'plex-meets-ha-modal';
+		const STYLE_ID = 'plex-meets-ha-modal-style';
+
+		if (!document.getElementById(STYLE_ID)) {
+			const styleEl = document.createElement('style');
+			styleEl.id = STYLE_ID;
+			styleEl.textContent = `
+				#${MODAL_ID} {
+					display: none;
+					position: fixed;
+					top: 0; left: 0; right: 0; bottom: 0;
+					z-index: 9999;
+					background: rgba(0,0,0,0.75);
+					align-items: center;
+					justify-content: center;
+				}
+				#${MODAL_ID}.active { display: flex; }
+				#${MODAL_ID} .pmPanel {
+					position: relative;
+					width: 92%; max-width: 860px; max-height: 88vh;
+					background: #181818; border-radius: 12px;
+					overflow: hidden; display: flex; flex-direction: column;
+					box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+				}
+				#${MODAL_ID} .pmBackdrop {
+					position: absolute; top: 0; left: 0; right: 0; height: 200px;
+					background-size: cover; background-position: center top;
+					opacity: 0.25; pointer-events: none;
+				}
+				#${MODAL_ID} .pmClose {
+					position: absolute; top: 10px; right: 12px; z-index: 10;
+					background: rgba(0,0,0,0.6); border: none; color: white;
+					font-size: 22px; width: 32px; height: 32px; border-radius: 50%;
+					cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+				}
+				#${MODAL_ID} .pmClose:hover { background: rgba(255,255,255,0.2); }
+				#${MODAL_ID} .pmTop {
+					display: flex; flex-direction: row; gap: 20px;
+					padding: 20px; position: relative; flex-shrink: 0;
+				}
+				#${MODAL_ID} .pmPoster {
+					flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #000;
+				}
+				#${MODAL_ID} .pmPoster img { display: block; width: 140px; height: 207px; object-fit: cover; }
+				#${MODAL_ID} .pmPoster.square img { height: 140px; }
+				#${MODAL_ID} .pmInfo {
+					flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end;
+				}
+				#${MODAL_ID} .pmTitle {
+					font-size: 22px; font-weight: bold; color: white;
+					margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+				}
+				#${MODAL_ID} .pmYear { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 8px; }
+				#${MODAL_ID} .pmMeta { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+				#${MODAL_ID} .pmMeta .minutesDetail,
+				#${MODAL_ID} .pmMeta .contentRatingDetail,
+				#${MODAL_ID} .pmMeta .ratingDetail {
+					background: rgba(255,255,255,0.14); padding: 4px 10px;
+					border-radius: 5px; font-size: 12px; color: white; white-space: nowrap;
+				}
+				#${MODAL_ID} .pmDesc {
+					font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5;
+					display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+					overflow: hidden; margin-bottom: 12px;
+				}
+				#${MODAL_ID} .pmActions { display: flex; gap: 10px; flex-wrap: wrap; }
+				#${MODAL_ID} .pmDivider { height: 1px; background: rgba(255,255,255,0.1); margin: 0 20px; flex-shrink: 0; }
+				#${MODAL_ID} .pmSeasons {
+					display: none; flex-direction: row; gap: 8px;
+					padding: 12px 20px; overflow-x: auto; flex-shrink: 0;
+					scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
+				}
+				#${MODAL_ID} .pmSeasons::-webkit-scrollbar { height: 4px; }
+				#${MODAL_ID} .pmSeasons::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+				#${MODAL_ID} .pmSeasonTab {
+					flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+					border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7);
+					font-size: 13px; cursor: pointer; white-space: nowrap;
+					transition: border-color 0.2s, color 0.2s; background: transparent;
+				}
+				#${MODAL_ID} .pmSeasonTab:hover { border-color: white; color: white; }
+				#${MODAL_ID} .pmSeasonTab.active { background: orange; border-color: orange; color: black; font-weight: bold; }
+				#${MODAL_ID} .pmEpsSection { flex: 1; overflow-y: auto; min-height: 0; }
+				#${MODAL_ID} .pmEpsRow {
+					display: flex; flex-direction: row; gap: 12px;
+					padding: 0 20px 20px; overflow-x: auto;
+					scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
+				}
+				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar { height: 4px; }
+				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+				#${MODAL_ID} .pmEpCard { flex-shrink: 0; width: 200px; cursor: pointer; }
+				#${MODAL_ID} .pmEpThumb {
+					width: 200px; height: 113px; border-radius: 5px;
+					overflow: hidden; background: #000; position: relative;
+				}
+				#${MODAL_ID} .pmEpThumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+				#${MODAL_ID} .pmEpThumb .interactiveArea { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+				#${MODAL_ID} .pmEpThumb .interactiveArea:hover { background: rgba(0,0,0,0.3); }
+				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton'] {
+					width: 40px; height: 40px; border: 2px solid white; border-radius: 100%;
+					cursor: pointer; margin: 0 auto; left: calc(50% - 20px);
+					display: block; top: calc(50% - 20px); position: absolute;
+					background: rgba(0,0,0,0); border-color: rgba(255,255,255,0); transition: 0.2s;
+				}
+				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton'] {
+					background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,1);
+				}
+				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton']::after {
+					content: ''; display: inline-block; position: relative;
+					top: 1px; left: 2px; border-style: solid; border-width: 6px 0 6px 12px;
+					border-color: transparent transparent transparent rgba(255,255,255,0); transition: 0.2s;
+				}
+				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton']::after {
+					border-color: transparent transparent transparent rgba(255,255,255,1);
+				}
+				#${MODAL_ID} .pmEpTitle { font-size: 12px; color: white; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+				#${MODAL_ID} .pmEpNum { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+				#${MODAL_ID} .pmSpinner { padding: 20px; display: flex; justify-content: center; }
+				#${MODAL_ID} .lds-ring { display: inline-block; position: relative; width: 40px; height: 40px; }
+				#${MODAL_ID} .lds-ring div {
+					box-sizing: border-box; display: block; position: absolute;
+					width: 32px; height: 32px; margin: 4px; border: 4px solid orange;
+					border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5,0,0.5,1) infinite;
+					border-color: orange transparent transparent transparent;
+				}
+			`;
+			document.head.appendChild(styleEl);
 		}
+
+		const existing = document.getElementById(MODAL_ID);
+		if (existing) {
+			this.plexModalElem = existing;
+			return;
+		}
+
 		const modal = document.createElement('div');
-		modal.className = 'plexModal';
+		modal.id = MODAL_ID;
 		modal.addEventListener('click', (e) => {
-			if (e.target === modal) {
-				this.hidePlexModal();
-			}
+			if (e.target === modal) this.hidePlexModal();
 		});
 
 		const panel = document.createElement('div');
-		panel.className = 'plexModalPanel';
+		panel.className = 'pmPanel';
 
 		const backdrop = document.createElement('div');
-		backdrop.className = 'plexModalBackdrop';
+		backdrop.className = 'pmBackdrop';
 		panel.appendChild(backdrop);
 
 		const closeBtn = document.createElement('button');
-		closeBtn.className = 'plexModalClose';
+		closeBtn.className = 'pmClose';
 		closeBtn.innerHTML = '&times;';
 		closeBtn.addEventListener('click', () => this.hidePlexModal());
 		panel.appendChild(closeBtn);
 
 		const top = document.createElement('div');
-		top.className = 'plexModalTop';
+		top.className = 'pmTop';
 
 		const poster = document.createElement('div');
-		poster.className = 'plexModalPoster';
-		const posterImg = document.createElement('img');
-		poster.appendChild(posterImg);
+		poster.className = 'pmPoster';
+		poster.appendChild(document.createElement('img'));
 		top.appendChild(poster);
 
 		const info = document.createElement('div');
-		info.className = 'plexModalInfo';
+		info.className = 'pmInfo';
 		info.innerHTML = `
-			<h2 class="plexModalTitle"></h2>
-			<div class="plexModalYear"></div>
-			<div class="plexModalMeta"></div>
-			<div class="plexModalDesc"></div>
-			<div class="plexModalActions"></div>
+			<h2 class="pmTitle"></h2>
+			<div class="pmYear"></div>
+			<div class="pmMeta"></div>
+			<div class="pmDesc"></div>
+			<div class="pmActions"></div>
 		`;
 		top.appendChild(info);
 		panel.appendChild(top);
 
 		const divider = document.createElement('div');
-		divider.className = 'plexModalDivider';
+		divider.className = 'pmDivider';
 		panel.appendChild(divider);
 
 		const seasonsBar = document.createElement('div');
-		seasonsBar.className = 'plexModalSeasons';
-		seasonsBar.style.display = 'none';
+		seasonsBar.className = 'pmSeasons';
 		panel.appendChild(seasonsBar);
 
 		const episodesSection = document.createElement('div');
-		episodesSection.className = 'plexModalEpisodesSection';
-
+		episodesSection.className = 'pmEpsSection';
 		const episodesRow = document.createElement('div');
-		episodesRow.className = 'plexModalEpisodesRow';
+		episodesRow.className = 'pmEpsRow';
 		episodesSection.appendChild(episodesRow);
 		panel.appendChild(episodesSection);
 
@@ -1197,24 +1324,23 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (!this.plexModalElem || !this.plex) return;
 
 		const modal = this.plexModalElem;
-		const panel = modal.querySelector('.plexModalPanel') as HTMLElement;
-		const backdrop = modal.querySelector('.plexModalBackdrop') as HTMLElement;
-		const poster = modal.querySelector('.plexModalPoster') as HTMLElement;
-		const posterImg = modal.querySelector('.plexModalPoster img') as HTMLImageElement;
-		const titleElem = modal.querySelector('.plexModalTitle') as HTMLElement;
-		const yearElem = modal.querySelector('.plexModalYear') as HTMLElement;
-		const metaElem = modal.querySelector('.plexModalMeta') as HTMLElement;
-		const descElem = modal.querySelector('.plexModalDesc') as HTMLElement;
-		const actionsElem = modal.querySelector('.plexModalActions') as HTMLElement;
-		const seasonsBar = modal.querySelector('.plexModalSeasons') as HTMLElement;
-		const episodesRow = modal.querySelector('.plexModalEpisodesRow') as HTMLElement;
+		const backdrop = modal.querySelector('.pmBackdrop') as HTMLElement;
+		const poster = modal.querySelector('.pmPoster') as HTMLElement;
+		const posterImg = modal.querySelector('.pmPoster img') as HTMLImageElement;
+		const titleElem = modal.querySelector('.pmTitle') as HTMLElement;
+		const yearElem = modal.querySelector('.pmYear') as HTMLElement;
+		const metaElem = modal.querySelector('.pmMeta') as HTMLElement;
+		const descElem = modal.querySelector('.pmDesc') as HTMLElement;
+		const actionsElem = modal.querySelector('.pmActions') as HTMLElement;
+		const seasonsBar = modal.querySelector('.pmSeasons') as HTMLElement;
+		const episodesRow = modal.querySelector('.pmEpsRow') as HTMLElement;
 
 		seasonsBar.innerHTML = '';
 		seasonsBar.style.display = 'none';
 		episodesRow.innerHTML = '';
 
 		const isSquare = _.isEqual(data.type, 'artist') || _.isEqual(data.type, 'album');
-		poster.classList.toggle('square', isSquare);
+		if (isSquare) { poster.classList.add('square'); } else { poster.classList.remove('square'); }
 
 		const thumbURL = this.plex.authorizeURL(
 			`${this.plex.getBasicURL()}/photo/:/transcode?width=280&height=420&minSize=1&upscale=1&url=${
@@ -1308,13 +1434,13 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					const idx = seasonIdx;
 					seasonIdx += 1;
 					const tab = document.createElement('div');
-					tab.className = 'plexModalSeasonTab';
+					tab.className = 'pmSeasonTab';
 					tab.innerHTML = escapeHtml(season.title);
 					tab.addEventListener('click', async (e) => {
 						e.stopPropagation();
-						seasonsBar.querySelectorAll('.plexModalSeasonTab').forEach(t => t.classList.remove('active'));
+						seasonsBar.querySelectorAll('.pmSeasonTab').forEach(t => t.classList.remove('active'));
 						tab.classList.add('active');
-						episodesRow.innerHTML = `<div class='plexModalSpinner'><div class='lds-ring'><div></div><div></div><div></div><div></div></div></div>`;
+						episodesRow.innerHTML = `<div class='pmSpinner'><div class='lds-ring'><div></div><div></div><div></div><div></div></div></div>`;
 						if (this.plex) {
 							const epData = await this.plex.getLibraryData(season.key);
 							episodesRow.innerHTML = '';
@@ -1336,10 +1462,10 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		_.forEach(episodes, ep => {
 			if (!this.plex) return;
 			const card = document.createElement('div');
-			card.className = 'plexModalEpisodeCard';
+			card.className = 'pmEpCard';
 
 			const thumbDiv = document.createElement('div');
-			thumbDiv.className = 'plexModalEpisodeThumb';
+			thumbDiv.className = 'pmEpThumb';
 
 			const thumbImg = document.createElement('img');
 			const epThumbURL = this.plex.authorizeURL(
@@ -1367,12 +1493,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			card.appendChild(thumbDiv);
 
 			const titleDiv = document.createElement('div');
-			titleDiv.className = 'plexModalEpisodeTitle';
+			titleDiv.className = 'pmEpTitle';
 			titleDiv.innerHTML = escapeHtml(ep.title);
 			card.appendChild(titleDiv);
 
 			const numDiv = document.createElement('div');
-			numDiv.className = 'plexModalEpisodeNum';
+			numDiv.className = 'pmEpNum';
 			if (ep.type === 'episode') {
 				numDiv.innerHTML = `Episode ${escapeHtml(ep.index)}`;
 			} else if (ep.type === 'clip' && ep.subtype) {
