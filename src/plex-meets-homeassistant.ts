@@ -137,6 +137,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	detailElem: HTMLElement | undefined;
 
+	plexModalElem: HTMLElement | undefined;
+
 	seasonsElem: HTMLElement | undefined;
 
 	seasonsElemHidden = true;
@@ -1094,6 +1096,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		endElem.className = 'clear';
 		this.contentContainer.appendChild(endElem);
 
+		this.createPlexModal();
+
 		this.renderMovieElems();
 		this.calculatePositions();
 		this.loadCustomStyles();
@@ -1113,6 +1117,271 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 			}
 		}, 100);
+	};
+
+	createPlexModal = (): void => {
+		if (this.plexModalElem) {
+			this.plexModalElem.remove();
+		}
+		const modal = document.createElement('div');
+		modal.className = 'plexModal';
+		modal.addEventListener('click', (e) => {
+			if (e.target === modal) {
+				this.hidePlexModal();
+			}
+		});
+
+		const panel = document.createElement('div');
+		panel.className = 'plexModalPanel';
+
+		const backdrop = document.createElement('div');
+		backdrop.className = 'plexModalBackdrop';
+		panel.appendChild(backdrop);
+
+		const closeBtn = document.createElement('button');
+		closeBtn.className = 'plexModalClose';
+		closeBtn.innerHTML = '&times;';
+		closeBtn.addEventListener('click', () => this.hidePlexModal());
+		panel.appendChild(closeBtn);
+
+		const top = document.createElement('div');
+		top.className = 'plexModalTop';
+
+		const poster = document.createElement('div');
+		poster.className = 'plexModalPoster';
+		const posterImg = document.createElement('img');
+		poster.appendChild(posterImg);
+		top.appendChild(poster);
+
+		const info = document.createElement('div');
+		info.className = 'plexModalInfo';
+		info.innerHTML = `
+			<h2 class="plexModalTitle"></h2>
+			<div class="plexModalYear"></div>
+			<div class="plexModalMeta"></div>
+			<div class="plexModalDesc"></div>
+			<div class="plexModalActions"></div>
+		`;
+		top.appendChild(info);
+		panel.appendChild(top);
+
+		const divider = document.createElement('div');
+		divider.className = 'plexModalDivider';
+		panel.appendChild(divider);
+
+		const seasonsBar = document.createElement('div');
+		seasonsBar.className = 'plexModalSeasons';
+		seasonsBar.style.display = 'none';
+		panel.appendChild(seasonsBar);
+
+		const episodesSection = document.createElement('div');
+		episodesSection.className = 'plexModalEpisodesSection';
+
+		const episodesRow = document.createElement('div');
+		episodesRow.className = 'plexModalEpisodesRow';
+		episodesSection.appendChild(episodesRow);
+		panel.appendChild(episodesSection);
+
+		modal.appendChild(panel);
+		document.body.appendChild(modal);
+		this.plexModalElem = modal;
+	};
+
+	hidePlexModal = (): void => {
+		if (this.plexModalElem) {
+			this.plexModalElem.classList.remove('active');
+		}
+	};
+
+	showPlexModal = async (data: any): Promise<void> => {
+		if (!this.plexModalElem || !this.plex) return;
+
+		const modal = this.plexModalElem;
+		const panel = modal.querySelector('.plexModalPanel') as HTMLElement;
+		const backdrop = modal.querySelector('.plexModalBackdrop') as HTMLElement;
+		const poster = modal.querySelector('.plexModalPoster') as HTMLElement;
+		const posterImg = modal.querySelector('.plexModalPoster img') as HTMLImageElement;
+		const titleElem = modal.querySelector('.plexModalTitle') as HTMLElement;
+		const yearElem = modal.querySelector('.plexModalYear') as HTMLElement;
+		const metaElem = modal.querySelector('.plexModalMeta') as HTMLElement;
+		const descElem = modal.querySelector('.plexModalDesc') as HTMLElement;
+		const actionsElem = modal.querySelector('.plexModalActions') as HTMLElement;
+		const seasonsBar = modal.querySelector('.plexModalSeasons') as HTMLElement;
+		const episodesRow = modal.querySelector('.plexModalEpisodesRow') as HTMLElement;
+
+		seasonsBar.innerHTML = '';
+		seasonsBar.style.display = 'none';
+		episodesRow.innerHTML = '';
+
+		const isSquare = _.isEqual(data.type, 'artist') || _.isEqual(data.type, 'album');
+		poster.classList.toggle('square', isSquare);
+
+		const thumbURL = this.plex.authorizeURL(
+			`${this.plex.getBasicURL()}/photo/:/transcode?width=280&height=420&minSize=1&upscale=1&url=${
+				_.isEqual(data.type, 'episode') ? data.grandparentThumb : data.thumb
+			}`
+		);
+		posterImg.src = thumbURL;
+
+		if (data.art) {
+			const artURL = this.plex.authorizeURL(this.plex.getBasicURL() + data.art);
+			backdrop.style.backgroundImage = `url('${artURL}')`;
+		} else {
+			backdrop.style.backgroundImage = '';
+		}
+
+		titleElem.innerHTML = escapeHtml(
+			_.isEqual(data.type, 'episode') ? data.grandparentTitle : (data.channelCallSign || data.title)
+		);
+
+		if (data.year) {
+			yearElem.innerHTML = escapeHtml(data.year);
+			yearElem.style.display = 'block';
+		} else {
+			yearElem.style.display = 'none';
+		}
+
+		const metaParts: string[] = [];
+		if (data.duration) {
+			metaParts.push(`<span class='minutesDetail'>${Math.round(parseInt(data.duration, 10) / 60 / 1000)} min</span>`);
+		}
+		if (data.contentRating) {
+			metaParts.push(`<span class='contentRatingDetail'>${escapeHtml(data.contentRating)}</span>`);
+		}
+		if (data.rating) {
+			const stars = parseFloat(data.rating) < 5 ? '&#128465;' : '&#11088;';
+			metaParts.push(`<span class='ratingDetail'>${stars}&nbsp;${Math.round(parseFloat(data.rating) * 10) / 10}</span>`);
+		}
+		metaElem.innerHTML = metaParts.join('');
+
+		descElem.innerHTML = data.summary ? escapeHtml(data.summary) : '';
+
+		actionsElem.innerHTML = '';
+		if (this.playController) {
+			this.playController.setPlayActionButtonType(data.type);
+			const playActionBtn = this.playController.getPlayActionButton();
+			playActionBtn.addEventListener('click', (e: MouseEvent) => {
+				e.stopPropagation();
+				if (this.playController) this.playController.play(data, true);
+			});
+			actionsElem.appendChild(playActionBtn);
+		}
+
+		modal.classList.add('active');
+
+		let childrenData: Record<string, any> = {};
+		if (this.plex) {
+			if (_.isEqual(data.type, 'episode')) {
+				childrenData = await this.plex.getLibraryData(`${data.grandparentKey}/children`);
+			} else if (data.childCount > 0 || _.isEqual(data.type, 'artist') || _.isEqual(data.type, 'album') || _.includes(data.key, 'folder')) {
+				childrenData = await this.plex.getLibraryData(data.key);
+			}
+		}
+
+		if (!modal.classList.contains('active')) return;
+
+		if (!_.isEmpty(childrenData)) {
+			const firstType = _.get(childrenData[0], 'type');
+
+			if (_.isEqual(firstType, 'track')) {
+				const tableView = document.createElement('table');
+				tableView.style.width = 'calc(100% - 40px)';
+				tableView.style.margin = '0 20px 20px';
+				tableView.style.border = 'none';
+				tableView.cellSpacing = '0';
+				tableView.cellPadding = '0';
+				let isEven = false;
+				_.forEach(childrenData, trackData => {
+					if (this.playController && this.plex && _.isEqual(trackData.type, 'track')) {
+						tableView.append(createTrackView(this.playController, this.plex, trackData, this.fontSize1, this.fontSize2, isEven));
+						isEven = !isEven;
+					}
+				});
+				episodesRow.appendChild(tableView);
+			} else if (_.isEqual(firstType, 'episode') || _.isEqual(firstType, 'clip')) {
+				this.renderModalEpisodes(episodesRow, childrenData);
+			} else {
+				seasonsBar.style.display = 'flex';
+				let firstSeasonSelected = false;
+				let seasonIdx = 0;
+				_.forEach(childrenData, (season) => {
+					const idx = seasonIdx;
+					seasonIdx += 1;
+					const tab = document.createElement('div');
+					tab.className = 'plexModalSeasonTab';
+					tab.innerHTML = escapeHtml(season.title);
+					tab.addEventListener('click', async (e) => {
+						e.stopPropagation();
+						seasonsBar.querySelectorAll('.plexModalSeasonTab').forEach(t => t.classList.remove('active'));
+						tab.classList.add('active');
+						episodesRow.innerHTML = `<div class='plexModalSpinner'><div class='lds-ring'><div></div><div></div><div></div><div></div></div></div>`;
+						if (this.plex) {
+							const epData = await this.plex.getLibraryData(season.key);
+							episodesRow.innerHTML = '';
+							this.renderModalEpisodes(episodesRow, epData);
+						}
+					});
+					seasonsBar.appendChild(tab);
+
+					if (!firstSeasonSelected && idx === 0) {
+						firstSeasonSelected = true;
+						setTimeout(() => tab.click(), 0);
+					}
+				});
+			}
+		}
+	};
+
+	renderModalEpisodes = (container: HTMLElement, episodes: any): void => {
+		_.forEach(episodes, ep => {
+			if (!this.plex) return;
+			const card = document.createElement('div');
+			card.className = 'plexModalEpisodeCard';
+
+			const thumbDiv = document.createElement('div');
+			thumbDiv.className = 'plexModalEpisodeThumb';
+
+			const thumbImg = document.createElement('img');
+			const epThumbURL = this.plex.authorizeURL(
+				`${this.plex.getBasicURL()}/photo/:/transcode?width=400&height=226&minSize=1&upscale=1&url=${ep.thumb}`
+			);
+			thumbImg.src = epThumbURL;
+			(thumbImg as any).loading = 'lazy';
+			thumbDiv.appendChild(thumbImg);
+
+			if (this.playController) {
+				const area = document.createElement('div');
+				area.className = 'interactiveArea';
+				const btn = this.playController.getPlayButton(ep.type);
+				if (this.playController.isPlaySupported(ep)) {
+					btn.classList.remove('disabled');
+				}
+				btn.addEventListener('click', (e: MouseEvent) => {
+					e.stopPropagation();
+					if (this.playController) this.playController.play(ep, true);
+				});
+				area.appendChild(btn);
+				thumbDiv.appendChild(area);
+			}
+
+			card.appendChild(thumbDiv);
+
+			const titleDiv = document.createElement('div');
+			titleDiv.className = 'plexModalEpisodeTitle';
+			titleDiv.innerHTML = escapeHtml(ep.title);
+			card.appendChild(titleDiv);
+
+			const numDiv = document.createElement('div');
+			numDiv.className = 'plexModalEpisodeNum';
+			if (ep.type === 'episode') {
+				numDiv.innerHTML = `Episode ${escapeHtml(ep.index)}`;
+			} else if (ep.type === 'clip' && ep.subtype) {
+				numDiv.innerHTML = escapeHtml(ep.subtype);
+			}
+			card.appendChild(numDiv);
+
+			container.appendChild(card);
+		});
 	};
 
 	minimizeSeasons = (): void => {
@@ -2125,7 +2394,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		movieElem.addEventListener('click', () => {
 			this.activeMovieElemData = data;
-			this.activateMovieElem(movieElem);
+			this.showPlexModal(data);
 		});
 
 		const interactiveArea = document.createElement('div');

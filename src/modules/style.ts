@@ -563,6 +563,248 @@ style.textContent = css`
 	button[name='playButton']:focus:after {
 		border-color: transparent transparent transparent black !important;
 	}
+	.plexModal {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 1000;
+		background: rgba(0, 0, 0, 0.75);
+		align-items: center;
+		justify-content: center;
+	}
+	.plexModal.active {
+		display: flex;
+	}
+	.plexModalPanel {
+		position: relative;
+		width: 92%;
+		max-width: 860px;
+		max-height: 88vh;
+		background: #181818;
+		border-radius: 12px;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+	}
+	.plexModalBackdrop {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 200px;
+		background-size: cover;
+		background-position: center top;
+		opacity: 0.25;
+		pointer-events: none;
+	}
+	.plexModalClose {
+		position: absolute;
+		top: 10px;
+		right: 12px;
+		z-index: 10;
+		background: rgba(0, 0, 0, 0.6);
+		border: none;
+		color: white;
+		font-size: 22px;
+		line-height: 1;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+	}
+	.plexModalClose:hover {
+		background: rgba(255, 255, 255, 0.2);
+	}
+	.plexModalTop {
+		display: flex;
+		flex-direction: row;
+		gap: 20px;
+		padding: 20px;
+		position: relative;
+		flex-shrink: 0;
+	}
+	.plexModalPoster {
+		flex-shrink: 0;
+		border-radius: 6px;
+		overflow: hidden;
+		background: #000;
+	}
+	.plexModalPoster img {
+		display: block;
+		width: 140px;
+		height: 207px;
+		object-fit: cover;
+	}
+	.plexModalPoster.square img {
+		height: 140px;
+	}
+	.plexModalInfo {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+	}
+	.plexModalTitle {
+		font-size: 22px;
+		font-weight: bold;
+		color: white;
+		margin: 0 0 6px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.plexModalYear {
+		font-size: 13px;
+		color: hsla(0, 0%, 100%, 0.55);
+		margin-bottom: 8px;
+	}
+	.plexModalMeta {
+		margin-bottom: 10px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.plexModalDesc {
+		font-size: 13px;
+		color: hsla(0, 0%, 100%, 0.75);
+		line-height: 1.5;
+		display: -webkit-box;
+		-webkit-line-clamp: 4;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		margin-bottom: 12px;
+	}
+	.plexModalActions {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.plexModalDivider {
+		height: 1px;
+		background: rgba(255, 255, 255, 0.1);
+		margin: 0 20px;
+		flex-shrink: 0;
+	}
+	.plexModalSeasons {
+		display: flex;
+		flex-direction: row;
+		gap: 8px;
+		padding: 12px 20px;
+		overflow-x: auto;
+		flex-shrink: 0;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255,255,255,0.2) transparent;
+	}
+	.plexModalSeasons::-webkit-scrollbar {
+		height: 4px;
+	}
+	.plexModalSeasons::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.plexModalSeasons::-webkit-scrollbar-thumb {
+		background: rgba(255,255,255,0.2);
+		border-radius: 2px;
+	}
+	.plexModalSeasonTab {
+		flex-shrink: 0;
+		padding: 6px 14px;
+		border-radius: 20px;
+		border: 1px solid rgba(255,255,255,0.25);
+		color: rgba(255,255,255,0.7);
+		font-size: 13px;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: 0.2s;
+		background: transparent;
+	}
+	.plexModalSeasonTab:hover {
+		border-color: white;
+		color: white;
+	}
+	.plexModalSeasonTab.active {
+		background: orange;
+		border-color: orange;
+		color: black;
+		font-weight: bold;
+	}
+	.plexModalEpisodesSection {
+		flex: 1;
+		overflow-y: auto;
+		min-height: 0;
+	}
+	.plexModalEpisodesRow {
+		display: flex;
+		flex-direction: row;
+		gap: 12px;
+		padding: 0 20px 20px;
+		overflow-x: auto;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255,255,255,0.2) transparent;
+	}
+	.plexModalEpisodesRow::-webkit-scrollbar {
+		height: 4px;
+	}
+	.plexModalEpisodesRow::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.plexModalEpisodesRow::-webkit-scrollbar-thumb {
+		background: rgba(255,255,255,0.2);
+		border-radius: 2px;
+	}
+	.plexModalEpisodeCard {
+		flex-shrink: 0;
+		width: 200px;
+		cursor: pointer;
+	}
+	.plexModalEpisodeThumb {
+		width: 200px;
+		height: 113px;
+		border-radius: 5px;
+		overflow: hidden;
+		background: #000;
+		position: relative;
+	}
+	.plexModalEpisodeThumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.plexModalEpisodeThumb .interactiveArea {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+	}
+	.plexModalEpisodeTitle {
+		font-size: 12px;
+		color: white;
+		margin-top: 5px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-weight: bold;
+	}
+	.plexModalEpisodeNum {
+		font-size: 11px;
+		color: rgba(255,255,255,0.55);
+		margin-top: 2px;
+	}
+	.plexModalSpinner {
+		padding: 20px;
+		display: flex;
+		justify-content: center;
+	}
 `.cssText;
 
 export default style;
