@@ -43,6 +43,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	localProtocol: 'http' | 'https' = 'http';
 
+	remoteIp: string | false = false;
+
+	remotePort: number | false = false;
+
+	remoteProtocol: 'http' | 'https' = 'http';
+
 	displayType: string | false = false;
 
 	useHorizontalScroll = false;
@@ -606,11 +612,15 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}, 250);
 			}
 		} catch (err) {
-			if (this.localIp && (_.includes(err.message, 'Network Error') || _.includes(err.message, 'Failed to fetch'))) {
-				this.plex.ip = this.localIp;
-				this.plex.port = this.localPort;
-				this.plex.protocol = this.localProtocol;
-				this.localIp = false;
+			if (
+				this.remoteIp &&
+				this.plex &&
+				(_.includes(err.message, 'Network Error') || _.includes(err.message, 'Failed to fetch'))
+			) {
+				this.plex.ip = this.remoteIp;
+				this.plex.port = this.remotePort;
+				this.plex.protocol = this.remoteProtocol;
+				this.remoteIp = false;
 				this.renderInitialData();
 			} else {
 				this.error = `Plex server did not respond.<br/>Details of the error: ${escapeHtml(err.message)}`;
@@ -2912,7 +2922,15 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.localPort = config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
 		this.localProtocol = config.localProtocol === 'https' ? 'https' : 'http';
 
-		this.plex = new Plex(this.config.ip, this.plexPort, this.config.token, this.plexProtocol, this.config.sort);
+		// stash remote so we can fall back to it if local fails
+		this.remoteIp = this.config.ip;
+		this.remotePort = this.plexPort;
+		this.remoteProtocol = this.plexProtocol;
+
+		const startIp = this.localIp ? this.localIp : this.config.ip;
+		const startPort = this.localIp ? this.localPort : this.plexPort;
+		const startProtocol = this.localIp ? this.localProtocol : this.plexProtocol;
+		this.plex = new Plex(startIp, startPort, this.config.token, startProtocol, this.config.sort);
 		this.data = {};
 		this.error = '';
 		this.renderInitialData();
