@@ -1121,23 +1121,33 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	createPlexModal = (): void => {
 		const MODAL_ID = 'plex-meets-ha-modal';
-		const STYLE_ID = 'plex-meets-ha-modal-style-v2';
+		const STYLE_ID = 'plex-meets-ha-modal-style-v4';
+		document.querySelectorAll('[id^="plex-meets-ha-modal-style"]').forEach(el => el.remove());
 
 		if (!document.getElementById(STYLE_ID)) {
 			const styleEl = document.createElement('style');
 			styleEl.id = STYLE_ID;
 			styleEl.textContent = `
 				#${MODAL_ID} {
+					padding: 0;
+					margin: 0;
+					border: none;
+					background: transparent;
+					max-width: 100%;
+					max-height: 100%;
+					width: 100%;
+					height: 100%;
+					overflow: hidden;
 					display: none;
-					position: fixed;
-					top: 0; left: 0; right: 0; bottom: 0;
-					z-index: 9999;
-					background: rgba(0,0,0,0.75);
 					align-items: flex-end;
 					justify-content: center;
-					overscroll-behavior: contain;
 				}
-				#${MODAL_ID}.active { display: flex; }
+				#${MODAL_ID}[open] {
+					display: flex;
+				}
+				#${MODAL_ID}::backdrop {
+					background: rgba(0,0,0,0.75);
+				}
 				@media (min-height: 500px) {
 					#${MODAL_ID} { align-items: center; }
 				}
@@ -1158,7 +1168,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 				@media (min-height: 500px) {
 					#${MODAL_ID} .pmPanel {
-						width: 92%;
+						width: min(92%, 860px);
 						border-radius: 12px;
 						box-shadow: 0 8px 40px rgba(0,0,0,0.8);
 					}
@@ -1373,6 +1383,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (this.plexModalElem) {
 			this.plexModalElem.classList.remove('active');
 		}
+		document.body.style.overflow = '';
 	};
 
 	showPlexModal = async (data: any): Promise<void> => {
@@ -1478,6 +1489,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		}
 
 		modal.classList.add('active');
+		document.body.style.overflow = 'hidden';
 
 		let childrenData: Record<string, any> = {};
 		if (this.plex) {
