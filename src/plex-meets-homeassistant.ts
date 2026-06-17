@@ -817,8 +817,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (this.card) {
 			const getAreaSize = (): number => {
 				if (this.card) {
+					const cardWidth = Math.min(
+						this.card.getBoundingClientRect().width,
+						window.innerWidth
+					);
 					return (
-						this.card.getBoundingClientRect().width -
+						cardWidth -
 						parseInt(this.card.style.paddingRight, 10) -
 						parseInt(this.card.style.paddingLeft, 10)
 					);
