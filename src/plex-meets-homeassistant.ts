@@ -883,7 +883,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			this.card.style.overflow = 'hidden';
 			this.card.style.maxWidth = '100vw';
 			this.card.style.boxSizing = 'border-box';
-			this.card.style.padding = '16px';
+			this.card.style.padding = '8px';
 			this.card.style.paddingRight = '6px';
 
 			const titleContainer = document.createElement('h1');
