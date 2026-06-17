@@ -672,7 +672,6 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 			const loadAdditionalRowsCount = 2; // todo: make this configurable
 			let lastRowTop = 0;
-			this.contentContainer.style.width = '';
 			let containerWidth = 0;
 			let renderMore =
 				(!this.maxCount || this.renderedItems < this.maxCount) &&
@@ -765,9 +764,6 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				this.renderedItems = origRenderedItems;
 				this.columnsCount = origColumnsCount;
 			}
-			if (render && containerWidth > 0) {
-				this.contentContainer.style.width = `${containerWidth}px`;
-			}
 			return returnObj;
 		};
 
@@ -830,9 +826,6 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				return 0;
 			};
 			const areaSize = getAreaSize();
-			if (this.content) {
-				this.content.style.width = `${areaSize}px`;
-			}
 			const postersInRow = Math.floor(areaSize / this.minWidth);
 			if (areaSize > 0) {
 				const episodesInRow = Math.floor(areaSize / this.minEpisodeWidth);
@@ -888,8 +881,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (!this.card) {
 			this.card = document.createElement('ha-card');
 			this.card.style.overflow = 'hidden';
-			this.card.style.width = '100%';
-			this.card.style.maxWidth = '100%';
+			this.card.style.maxWidth = '100vw';
 			this.card.style.boxSizing = 'border-box';
 			this.card.style.padding = '16px';
 			this.card.style.paddingRight = '6px';
@@ -927,10 +919,6 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		this.content = document.createElement('div');
 		this.content.innerHTML = this.loadCustomStyles();
-		this.content.style.overflowX = 'auto';
-		this.content.style.overflowY = 'hidden';
-		this.content.style.whiteSpace = 'nowrap';
-		// width set below after areaSize is calculated
 
 		if (this.error !== '') {
 			this.content.innerHTML += `Error: ${this.error}`;
