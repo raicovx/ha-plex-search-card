@@ -841,11 +841,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 				CSS_STYLE.episodeWidth = Math.floor(areaSize / episodesInRow - marginRight);
 				CSS_STYLE.episodeHeight = Math.round(CSS_STYLE.episodeWidth * CSS_STYLE.episodeRatio);
-				// hack to make sure cards width is always calculated properly, todo solve better in the future
+				// re-render only if HA's padding caused a different column count (not sub-pixel jitter)
 				setTimeout(() => {
 					if (this.card) {
 						const newAreaSize = getAreaSize();
-						if (newAreaSize !== areaSize) {
+						const newPostersInRow = Math.floor(newAreaSize / this.minWidth);
+						if (newPostersInRow !== postersInRow) {
 							this.renderPage();
 						}
 					}
