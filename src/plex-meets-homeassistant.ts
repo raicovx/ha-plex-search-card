@@ -1121,7 +1121,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	createPlexModal = (): void => {
 		const MODAL_ID = 'plex-meets-ha-modal';
-		const STYLE_ID = 'plex-meets-ha-modal-style';
+		const STYLE_ID = 'plex-meets-ha-modal-style-v2';
 
 		if (!document.getElementById(STYLE_ID)) {
 			const styleEl = document.createElement('style');
@@ -1133,116 +1133,163 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					top: 0; left: 0; right: 0; bottom: 0;
 					z-index: 9999;
 					background: rgba(0,0,0,0.75);
-					align-items: center;
+					align-items: flex-end;
 					justify-content: center;
+					overscroll-behavior: contain;
 				}
 				#${MODAL_ID}.active { display: flex; }
+				@media (min-height: 500px) {
+					#${MODAL_ID} { align-items: center; }
+				}
 				#${MODAL_ID} .pmPanel {
 					position: relative;
-					width: 92%; max-width: 860px; max-height: 88vh;
-					background: #181818; border-radius: 12px;
-					overflow: hidden; display: flex; flex-direction: column;
-					box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+					width: 100%;
+					max-width: 860px;
+					max-height: 92vh;
+					max-height: 92dvh;
+					background: #181818;
+					border-radius: 16px 16px 0 0;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+					box-shadow: 0 -4px 40px rgba(0,0,0,0.8);
+					box-sizing: border-box;
+					padding-bottom: env(safe-area-inset-bottom, 0px);
+				}
+				@media (min-height: 500px) {
+					#${MODAL_ID} .pmPanel {
+						width: 92%;
+						border-radius: 12px;
+						box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+					}
 				}
 				#${MODAL_ID} .pmBackdrop {
-					position: absolute; top: 0; left: 0; right: 0; height: 200px;
+					position: absolute; top: 0; left: 0; right: 0; height: 160px;
 					background-size: cover; background-position: center top;
-					opacity: 0.25; pointer-events: none;
+					opacity: 0.2; pointer-events: none;
 				}
 				#${MODAL_ID} .pmClose {
 					position: absolute; top: 10px; right: 12px; z-index: 10;
 					background: rgba(0,0,0,0.6); border: none; color: white;
-					font-size: 22px; width: 32px; height: 32px; border-radius: 50%;
+					font-size: 22px; width: 36px; height: 36px; border-radius: 50%;
 					cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+					-webkit-tap-highlight-color: transparent;
 				}
 				#${MODAL_ID} .pmClose:hover { background: rgba(255,255,255,0.2); }
 				#${MODAL_ID} .pmTop {
-					display: flex; flex-direction: row; gap: 20px;
-					padding: 20px; position: relative; flex-shrink: 0;
+					display: flex; flex-direction: row; gap: 14px;
+					padding: 16px; position: relative; flex-shrink: 0;
 				}
 				#${MODAL_ID} .pmPoster {
 					flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #000;
 				}
-				#${MODAL_ID} .pmPoster img { display: block; width: 140px; height: 207px; object-fit: cover; }
-				#${MODAL_ID} .pmPoster.square img { height: 140px; }
+				#${MODAL_ID} .pmPoster img {
+					display: block; width: 80px; height: 118px; object-fit: cover;
+				}
+				#${MODAL_ID} .pmPoster.square img { height: 80px; }
+				@media (min-width: 480px) {
+					#${MODAL_ID} .pmTop { padding: 20px; gap: 20px; }
+					#${MODAL_ID} .pmPoster img { width: 120px; height: 178px; }
+					#${MODAL_ID} .pmPoster.square img { height: 120px; }
+				}
 				#${MODAL_ID} .pmInfo {
 					flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end;
 				}
 				#${MODAL_ID} .pmTitle {
-					font-size: 22px; font-weight: bold; color: white;
-					margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+					font-size: 17px; font-weight: bold; color: white;
+					margin: 0 32px 5px 0;
+					white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 				}
-				#${MODAL_ID} .pmYear { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 8px; }
-				#${MODAL_ID} .pmMeta { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+				@media (min-width: 480px) {
+					#${MODAL_ID} .pmTitle { font-size: 22px; }
+				}
+				#${MODAL_ID} .pmYear { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+				#${MODAL_ID} .pmMeta { margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
 				#${MODAL_ID} .pmMeta .minutesDetail,
 				#${MODAL_ID} .pmMeta .contentRatingDetail,
 				#${MODAL_ID} .pmMeta .ratingDetail {
-					background: rgba(255,255,255,0.14); padding: 4px 10px;
-					border-radius: 5px; font-size: 12px; color: white; white-space: nowrap;
+					background: rgba(255,255,255,0.14); padding: 3px 8px;
+					border-radius: 5px; font-size: 11px; color: white; white-space: nowrap;
 				}
 				#${MODAL_ID} .pmDesc {
-					font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5;
-					display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
-					overflow: hidden; margin-bottom: 12px;
+					font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.45;
+					display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+					overflow: hidden; margin-bottom: 10px;
 				}
-				#${MODAL_ID} .pmActions { display: flex; gap: 10px; flex-wrap: wrap; }
-				#${MODAL_ID} .pmDivider { height: 1px; background: rgba(255,255,255,0.1); margin: 0 20px; flex-shrink: 0; }
+				@media (min-width: 480px) {
+					#${MODAL_ID} .pmDesc { font-size: 13px; -webkit-line-clamp: 4; }
+				}
+				#${MODAL_ID} .pmActions { display: flex; gap: 8px; flex-wrap: wrap; }
+				#${MODAL_ID} .detailPlayAction {
+					font-size: 13px !important; padding: 8px 16px !important;
+				}
+				#${MODAL_ID} .pmDivider { height: 1px; background: rgba(255,255,255,0.1); margin: 0 16px; flex-shrink: 0; }
 				#${MODAL_ID} .pmSeasons {
 					display: none; flex-direction: row; gap: 8px;
-					padding: 12px 20px; overflow-x: auto; flex-shrink: 0;
-					scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
+					padding: 10px 16px; overflow-x: auto; flex-shrink: 0;
+					-webkit-overflow-scrolling: touch;
+					scrollbar-width: none;
 				}
-				#${MODAL_ID} .pmSeasons::-webkit-scrollbar { height: 4px; }
-				#${MODAL_ID} .pmSeasons::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+				#${MODAL_ID} .pmSeasons::-webkit-scrollbar { display: none; }
 				#${MODAL_ID} .pmSeasonTab {
 					flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
 					border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7);
 					font-size: 13px; cursor: pointer; white-space: nowrap;
 					transition: border-color 0.2s, color 0.2s; background: transparent;
+					-webkit-tap-highlight-color: transparent;
 				}
 				#${MODAL_ID} .pmSeasonTab:hover { border-color: white; color: white; }
 				#${MODAL_ID} .pmSeasonTab.active { background: orange; border-color: orange; color: black; font-weight: bold; }
-				#${MODAL_ID} .pmEpsSection { flex: 1; overflow-y: auto; min-height: 0; }
+				#${MODAL_ID} .pmEpsSection { flex: 1; overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
 				#${MODAL_ID} .pmEpsRow {
-					display: flex; flex-direction: row; gap: 12px;
-					padding: 0 20px 20px; overflow-x: auto;
-					scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
+					display: flex; flex-direction: row; gap: 10px;
+					padding: 4px 16px 16px; overflow-x: auto;
+					-webkit-overflow-scrolling: touch;
+					scrollbar-width: none;
 				}
-				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar { height: 4px; }
-				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
-				#${MODAL_ID} .pmEpCard { flex-shrink: 0; width: 200px; cursor: pointer; }
+				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar { display: none; }
+				#${MODAL_ID} .pmEpCard { flex-shrink: 0; width: 150px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+				@media (min-width: 480px) {
+					#${MODAL_ID} .pmEpCard { width: 180px; }
+				}
+				@media (min-width: 700px) {
+					#${MODAL_ID} .pmEpCard { width: 200px; }
+				}
 				#${MODAL_ID} .pmEpThumb {
-					width: 200px; height: 113px; border-radius: 5px;
+					width: 100%; aspect-ratio: 16/9; border-radius: 5px;
 					overflow: hidden; background: #000; position: relative;
 				}
 				#${MODAL_ID} .pmEpThumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 				#${MODAL_ID} .pmEpThumb .interactiveArea { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 				#${MODAL_ID} .pmEpThumb .interactiveArea:hover { background: rgba(0,0,0,0.3); }
 				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton'] {
-					width: 40px; height: 40px; border: 2px solid white; border-radius: 100%;
-					cursor: pointer; margin: 0 auto; left: calc(50% - 20px);
-					display: block; top: calc(50% - 20px); position: absolute;
+					width: 36px; height: 36px; border: 2px solid white; border-radius: 100%;
+					cursor: pointer; margin: 0 auto; left: calc(50% - 18px);
+					display: block; top: calc(50% - 18px); position: absolute;
 					background: rgba(0,0,0,0); border-color: rgba(255,255,255,0); transition: 0.2s;
 				}
-				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton'] {
-					background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,1);
+				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton'],
+				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton'].touchDevice {
+					background: rgba(0,0,0,0.5); border-color: rgba(255,255,255,1);
 				}
 				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton']::after {
 					content: ''; display: inline-block; position: relative;
-					top: 1px; left: 2px; border-style: solid; border-width: 6px 0 6px 12px;
+					top: 1px; left: 2px; border-style: solid; border-width: 5px 0 5px 10px;
 					border-color: transparent transparent transparent rgba(255,255,255,0); transition: 0.2s;
 				}
-				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton']::after {
+				#${MODAL_ID} .pmEpThumb .interactiveArea:hover button[name='playButton']::after,
+				#${MODAL_ID} .pmEpThumb .interactiveArea button[name='playButton'].touchDevice::after {
 					border-color: transparent transparent transparent rgba(255,255,255,1);
 				}
-				#${MODAL_ID} .pmEpTitle { font-size: 12px; color: white; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
-				#${MODAL_ID} .pmEpNum { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+				#${MODAL_ID} .pmEpTitle { font-size: 11px; color: white; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+				#${MODAL_ID} .pmEpNum { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; }
 				#${MODAL_ID} .pmDevicePicker { display: none; flex-direction: column; gap: 6px; margin-top: 10px; }
 				#${MODAL_ID} .pmDevicePicker.open { display: flex; }
 				#${MODAL_ID} .pmDeviceBtn {
 					padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.25);
 					background: rgba(255,255,255,0.08); color: white; font-size: 13px;
 					cursor: pointer; text-align: left; transition: background 0.15s;
+					-webkit-tap-highlight-color: transparent;
 				}
 				#${MODAL_ID} .pmDeviceBtn:hover { background: rgba(255,255,255,0.18); border-color: white; }
 				#${MODAL_ID} .pmSpinner { padding: 20px; display: flex; justify-content: center; }
