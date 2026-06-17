@@ -322,24 +322,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.resizeBackground();
 	};
 
-	resolveLocalConnection = async (): Promise<void> => {
-		if (!this.localIp) return;
-		const localURL = `${this.localProtocol}://${this.localIp}${this.localPort ? `:${this.localPort}` : ''}`;
-		try {
-			const controller = new AbortController();
-			const timer = setTimeout(() => controller.abort(), 3000);
-			await fetch(`${localURL}/`, { signal: controller.signal, mode: 'no-cors' });
-			clearTimeout(timer);
-			this.plex.ip = this.localIp;
-			this.plex.port = this.localPort;
-			this.plex.protocol = this.localProtocol;
-		} catch {
-			// local unreachable, keep remote config
-		}
-	};
-
 	renderInitialData = async (): Promise<void> => {
-		await this.resolveLocalConnection();
 		let { entity } = JSON.parse(JSON.stringify(this.config));
 
 		const processEntity = (entityObj: Record<string, any>, entityString: string): void => {
@@ -623,8 +606,16 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}, 250);
 			}
 		} catch (err) {
-			this.error = `Plex server did not respond.<br/>Details of the error: ${escapeHtml(err.message)}`;
-			this.renderPage();
+			if (this.localIp && (_.includes(err.message, 'Network Error') || _.includes(err.message, 'Failed to fetch'))) {
+				this.plex.ip = this.localIp;
+				this.plex.port = this.localPort;
+				this.plex.protocol = this.localProtocol;
+				this.localIp = false;
+				this.renderInitialData();
+			} else {
+				this.error = `Plex server did not respond.<br/>Details of the error: ${escapeHtml(err.message)}`;
+				this.renderPage();
+			}
 		}
 	};
 
@@ -1145,9 +1136,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 	createPlexModal = (): void => {
 		const MODAL_ID = 'plex-meets-ha-modal';
 		const STYLE_ID = 'plex-meets-ha-modal-style-v4';
-		document.querySelectorAll('[id^="plex-meets-ha-modal-style"]').forEach(el => el.remove());
 
 		if (!document.getElementById(STYLE_ID)) {
+			document.querySelectorAll('[id^="plex-meets-ha-modal-style"]').forEach(el => el.remove());
 			const styleEl = document.createElement('style');
 			styleEl.id = STYLE_ID;
 			styleEl.textContent = `
@@ -1347,7 +1338,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		const modal = document.createElement('dialog');
 		modal.id = MODAL_ID;
-		modal.addEventListener('click', (e) => {
+		modal.addEventListener('click', e => {
 			if (e.target === modal) this.hidePlexModal();
 		});
 
@@ -1430,7 +1421,11 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		episodesRow.innerHTML = '';
 
 		const isSquare = _.isEqual(data.type, 'artist') || _.isEqual(data.type, 'album');
-		if (isSquare) { poster.classList.add('square'); } else { poster.classList.remove('square'); }
+		if (isSquare) {
+			poster.classList.add('square');
+		} else {
+			poster.classList.remove('square');
+		}
 
 		const thumbURL = this.plex.authorizeURL(
 			`${this.plex.getBasicURL()}/photo/:/transcode?width=280&height=420&minSize=1&upscale=1&url=${
@@ -1447,7 +1442,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		}
 
 		titleElem.innerHTML = escapeHtml(
-			_.isEqual(data.type, 'episode') ? data.grandparentTitle : (data.channelCallSign || data.title)
+			_.isEqual(data.type, 'episode') ? data.grandparentTitle : data.channelCallSign || data.title
 		);
 
 		if (data.year) {
@@ -1466,7 +1461,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		}
 		if (data.rating) {
 			const stars = parseFloat(data.rating) < 5 ? '&#128465;' : '&#11088;';
-			metaParts.push(`<span class='ratingDetail'>${stars}&nbsp;${Math.round(parseFloat(data.rating) * 10) / 10}</span>`);
+			metaParts.push(
+				`<span class='ratingDetail'>${stars}&nbsp;${Math.round(parseFloat(data.rating) * 10) / 10}</span>`
+			);
 		}
 		metaElem.innerHTML = metaParts.join('');
 
@@ -1518,7 +1515,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (this.plex) {
 			if (_.isEqual(data.type, 'episode')) {
 				childrenData = await this.plex.getLibraryData(`${data.grandparentKey}/children`);
-			} else if (data.childCount > 0 || _.isEqual(data.type, 'artist') || _.isEqual(data.type, 'album') || _.includes(data.key, 'folder')) {
+			} else if (
+				data.childCount > 0 ||
+				_.isEqual(data.type, 'artist') ||
+				_.isEqual(data.type, 'album') ||
+				_.includes(data.key, 'folder')
+			) {
 				childrenData = await this.plex.getLibraryData(data.key);
 			}
 		}
@@ -1538,7 +1540,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				let isEven = false;
 				_.forEach(childrenData, trackData => {
 					if (this.playController && this.plex && _.isEqual(trackData.type, 'track')) {
-						tableView.append(createTrackView(this.playController, this.plex, trackData, this.fontSize1, this.fontSize2, isEven));
+						tableView.append(
+							createTrackView(this.playController, this.plex, trackData, this.fontSize1, this.fontSize2, isEven)
+						);
 						isEven = !isEven;
 					}
 				});
@@ -1549,13 +1553,13 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				seasonsBar.style.display = 'flex';
 				let firstSeasonSelected = false;
 				let seasonIdx = 0;
-				_.forEach(childrenData, (season) => {
+				_.forEach(childrenData, season => {
 					const idx = seasonIdx;
 					seasonIdx += 1;
 					const tab = document.createElement('div');
 					tab.className = 'pmSeasonTab';
 					tab.innerHTML = escapeHtml(season.title);
-					tab.addEventListener('click', async (e) => {
+					tab.addEventListener('click', async e => {
 						e.stopPropagation();
 						seasonsBar.querySelectorAll('.pmSeasonTab').forEach(t => t.classList.remove('active'));
 						tab.classList.add('active');
@@ -2905,8 +2909,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		}
 
 		this.localIp = config.localIp && !_.isEqual(config.localIp, '') ? config.localIp : false;
-		this.localPort =
-			config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
+		this.localPort = config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
 		this.localProtocol = config.localProtocol === 'https' ? 'https' : 'http';
 
 		this.plex = new Plex(this.config.ip, this.plexPort, this.config.token, this.plexProtocol, this.config.sort);
