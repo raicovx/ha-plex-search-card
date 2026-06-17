@@ -79,6 +79,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	previousPageWidth = 0;
 
+	resizeDebounceTimer: any = undefined;
+
 	runAfter = '';
 
 	renderNewElementsIfNeededTimeout: any;
@@ -239,25 +241,28 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 	};
 
 	resizeHandler = (): void => {
-		if (this.isVisible) {
-			if (!this.detailsShown) {
-				const videoPlayer = this.getElementsByClassName('videoPlayer')[0] as HTMLElement;
-				let isFullScreen = false;
-				if (videoPlayer.children.length > 0) {
-					isFullScreen = isVideoFullScreen(this);
-				}
+		clearTimeout(this.resizeDebounceTimer);
+		this.resizeDebounceTimer = setTimeout(() => {
+			if (this.isVisible) {
+				if (!this.detailsShown) {
+					const videoPlayer = this.getElementsByClassName('videoPlayer')[0] as HTMLElement;
+					let isFullScreen = false;
+					if (videoPlayer.children.length > 0) {
+						isFullScreen = isVideoFullScreen(this);
+					}
 
-				if (this.card && this.movieElems.length > 0 && !isFullScreen) {
-					if (this.previousPageWidth !== this.card.offsetWidth) {
-						this.previousPageWidth = this.card.offsetWidth;
-						this.renderPage();
-						const contentbg = this.getElementsByClassName('contentbg');
-						this.contentBGHeight = getHeight(contentbg[0] as HTMLElement);
+					if (this.card && this.movieElems.length > 0 && !isFullScreen) {
+						if (this.previousPageWidth !== this.card.offsetWidth) {
+							this.previousPageWidth = this.card.offsetWidth;
+							this.renderPage();
+							const contentbg = this.getElementsByClassName('contentbg');
+							this.contentBGHeight = getHeight(contentbg[0] as HTMLElement);
+						}
 					}
 				}
+				this.renderNewElementsIfNeeded();
 			}
-			this.renderNewElementsIfNeeded();
-		}
+		}, 150);
 	};
 
 	loadInitialData = async (): Promise<void> => {
