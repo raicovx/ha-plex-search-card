@@ -37,6 +37,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	plexProtocol: 'http' | 'https' = 'http';
 
+	localIp: string | false = false;
+
+	localPort: number | false = false;
+
+	localProtocol: 'http' | 'https' = 'http';
+
 	displayType: string | false = false;
 
 	useHorizontalScroll = false;
@@ -316,7 +322,24 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.resizeBackground();
 	};
 
+	resolveLocalConnection = async (): Promise<void> => {
+		if (!this.localIp) return;
+		const localURL = `${this.localProtocol}://${this.localIp}${this.localPort ? `:${this.localPort}` : ''}`;
+		try {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), 3000);
+			await fetch(`${localURL}/`, { signal: controller.signal, mode: 'no-cors' });
+			clearTimeout(timer);
+			this.plex.ip = this.localIp;
+			this.plex.port = this.localPort;
+			this.plex.protocol = this.localProtocol;
+		} catch {
+			// local unreachable, keep remote config
+		}
+	};
+
 	renderInitialData = async (): Promise<void> => {
+		await this.resolveLocalConnection();
 		let { entity } = JSON.parse(JSON.stringify(this.config));
 
 		const processEntity = (entityObj: Record<string, any>, entityString: string): void => {
@@ -1133,10 +1156,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					margin: 0;
 					border: none;
 					background: transparent;
-					max-width: 100%;
-					max-height: 100%;
+					position: fixed;
+					inset: 0;
 					width: 100%;
 					height: 100%;
+					max-width: 100%;
+					max-height: 100%;
 					overflow: hidden;
 					display: none;
 					align-items: flex-end;
@@ -1320,7 +1345,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			return;
 		}
 
-		const modal = document.createElement('div');
+		const modal = document.createElement('dialog');
 		modal.id = MODAL_ID;
 		modal.addEventListener('click', (e) => {
 			if (e.target === modal) this.hidePlexModal();
@@ -1381,9 +1406,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	hidePlexModal = (): void => {
 		if (this.plexModalElem) {
-			this.plexModalElem.classList.remove('active');
+			(this.plexModalElem as HTMLDialogElement).close();
 		}
-		document.body.style.overflow = '';
 	};
 
 	showPlexModal = async (data: any): Promise<void> => {
@@ -1488,8 +1512,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			}
 		}
 
-		modal.classList.add('active');
-		document.body.style.overflow = 'hidden';
+		(modal as HTMLDialogElement).showModal();
 
 		let childrenData: Record<string, any> = {};
 		if (this.plex) {
@@ -2880,6 +2903,11 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		if (!_.isNil(config.showSearch)) {
 			this.showSearch = config.showSearch;
 		}
+
+		this.localIp = config.localIp && !_.isEqual(config.localIp, '') ? config.localIp : false;
+		this.localPort =
+			config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
+		this.localProtocol = config.localProtocol === 'https' ? 'https' : 'http';
 
 		this.plex = new Plex(this.config.ip, this.plexPort, this.config.token, this.plexProtocol, this.config.sort);
 		this.data = {};
