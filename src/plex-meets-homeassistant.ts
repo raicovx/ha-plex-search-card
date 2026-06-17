@@ -877,6 +877,11 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			this.content.remove();
 		}
 
+		this.style.display = 'block';
+		this.style.overflow = 'hidden';
+		this.style.width = '100%';
+		this.style.boxSizing = 'border-box';
+
 		if (!this.card) {
 			this.card = document.createElement('ha-card');
 			this.card.style.overflow = 'hidden';
@@ -919,12 +924,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		this.content = document.createElement('div');
 		this.content.innerHTML = this.loadCustomStyles();
-		this.content.style.width = '100%';
-		this.content.style.boxSizing = 'border-box';
-		if (this.useHorizontalScroll) {
-			this.content.style.overflowX = 'auto';
-			this.content.style.whiteSpace = 'nowrap';
-		}
+		this.content.style.overflowX = 'auto';
+		this.content.style.overflowY = 'hidden';
+		this.content.style.whiteSpace = 'nowrap';
 
 		if (this.error !== '') {
 			this.content.innerHTML += `Error: ${this.error}`;
