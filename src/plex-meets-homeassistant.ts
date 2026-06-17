@@ -1224,15 +1224,16 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 				#${MODAL_ID} .pmPoster {
 					flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #000;
+					width: 80px; height: 118px;
 				}
+				#${MODAL_ID} .pmPoster.square { height: 80px; }
 				#${MODAL_ID} .pmPoster img {
-					display: block; width: 80px; height: 118px; object-fit: cover;
+					display: block; width: 100%; height: 100%; object-fit: cover;
 				}
-				#${MODAL_ID} .pmPoster.square img { height: 80px; }
 				@media (min-width: 480px) {
 					#${MODAL_ID} .pmTop { padding: 20px; gap: 20px; }
-					#${MODAL_ID} .pmPoster img { width: 120px; height: 178px; }
-					#${MODAL_ID} .pmPoster.square img { height: 120px; }
+					#${MODAL_ID} .pmPoster { width: 120px; height: 178px; }
+					#${MODAL_ID} .pmPoster.square { height: 120px; }
 				}
 				#${MODAL_ID} .pmInfo {
 					flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end;

@@ -436,7 +436,6 @@ style.textContent = css`
 		background-size: cover;
 		overflow: hidden;
 		border-radius: 5px;
-		transition: 0.5s;
 		position: relative;
 		z-index: 1;
 	}
@@ -444,7 +443,6 @@ style.textContent = css`
 		z-index: 1;
 		float: left;
 		margin-right: 10px;
-		transition: 0.5s;
 	}
 	.no-transparency {
 		background-color: rgba(0, 0, 0, 1) !important;
