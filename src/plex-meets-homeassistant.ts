@@ -830,6 +830,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				return 0;
 			};
 			const areaSize = getAreaSize();
+			if (this.content) {
+				this.content.style.width = `${areaSize}px`;
+			}
 			const postersInRow = Math.floor(areaSize / this.minWidth);
 			if (areaSize > 0) {
 				const episodesInRow = Math.floor(areaSize / this.minEpisodeWidth);
@@ -927,6 +930,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.content.style.overflowX = 'auto';
 		this.content.style.overflowY = 'hidden';
 		this.content.style.whiteSpace = 'nowrap';
+		// width set below after areaSize is calculated
 
 		if (this.error !== '') {
 			this.content.innerHTML += `Error: ${this.error}`;
