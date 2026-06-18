@@ -439,6 +439,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.renderPage();
 		try {
 			if (this.plex && this.hassObj) {
+				if (this.playController) {
+					this.playController.destroy();
+				}
 				this.playController = new PlayController(
 					this,
 					this.hassObj,

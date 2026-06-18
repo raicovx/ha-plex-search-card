@@ -14,7 +14,13 @@ class PlayController {
 
 	readyPlayersForType: Record<string, Record<string, any>> = {};
 
+	private destroyed = false;
+
 	entityStates: Record<string, any> = {};
+
+	private entityStateTimestamps: Record<string, number> = {};
+
+	private readonly STATE_TTL_MS = 10000;
 
 	entity: Record<string, any>;
 
@@ -618,12 +624,16 @@ class PlayController {
 		return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 	};
 
+	destroy = (): void => {
+		this.destroyed = true;
+	};
+
 	private refreshAvailableServicesPeriodically = async () => {
 		const sleep = async (ms: number): Promise<void> => {
 			return new Promise(resolve => setTimeout(resolve, ms));
 		};
 
-		while (true) {
+		while (!this.destroyed) {
 			// eslint-disable-next-line no-await-in-loop
 			await this.refreshStates();
 			const previousReadyPlayersForType = _.clone(this.readyPlayersForType);
@@ -786,37 +796,35 @@ class PlayController {
 		await this.refreshStates();
 	};
 
+	private fetchStateIfStale = async (entity: string): Promise<void> => {
+		const now = Date.now();
+		if (now - (this.entityStateTimestamps[entity] || 0) < this.STATE_TTL_MS) return;
+		try {
+			this.entityStates[entity] = await getState(this.hass, entity);
+			this.entityStateTimestamps[entity] = now;
+		} catch (err) {
+			// pass
+		}
+	};
+
 	private refreshStates = async (): Promise<Record<string, any>> => {
 		for (const [, value] of Object.entries(this.entity)) {
 			const entityVal = value;
 			if (_.isArray(entityVal)) {
 				for (const entity of entityVal) {
 					if (!_.isNil(this.hass.states[entity])) {
-						try {
-							// eslint-disable-next-line no-await-in-loop
-							this.entityStates[entity] = await getState(this.hass, entity);
-						} catch (err) {
-							// pass
-						}
-					}
-				}
-			} else {
-				try {
-					if (!_.isNil(this.hass.states[entityVal])) {
 						// eslint-disable-next-line no-await-in-loop
-						this.entityStates[entityVal] = await getState(this.hass, entityVal);
+						await this.fetchStateIfStale(entity);
 					}
-				} catch (err) {
-					// pass
 				}
+			} else if (!_.isNil(this.hass.states[entityVal])) {
+				// eslint-disable-next-line no-await-in-loop
+				await this.fetchStateIfStale(entityVal);
 			}
 		}
 		try {
 			if (this.hass.states['sensor.kodi_media_sensor_search']) {
-				this.entityStates['sensor.kodi_media_sensor_search'] = await getState(
-					this.hass,
-					'sensor.kodi_media_sensor_search'
-				);
+				await this.fetchStateIfStale('sensor.kodi_media_sensor_search');
 			}
 		} catch (err) {
 			// pass
