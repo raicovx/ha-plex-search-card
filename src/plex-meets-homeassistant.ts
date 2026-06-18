@@ -51,6 +51,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	displayType: string | false = false;
 
+	libraryNames: string[] = [];
+
 	useHorizontalScroll = false;
 
 	useShuffle = false;
@@ -229,7 +231,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			!this.detailsShown &&
 			window.innerHeight + scrollTop > height - 300 &&
 			this.renderedItems > 0 &&
-			this.renderedItems < this.data[this.config.libraryName].length &&
+			this.renderedItems < this.libraryNames.reduce((sum, n) => sum + (this.data[n] ? this.data[n].length : 0), 0) &&
 			(!this.maxCount || this.renderedItems < this.maxCount) &&
 			(!this.maxRows || this.renderedRows < this.config.maxRows) &&
 			_.isEmpty(this.searchValue)
@@ -547,32 +549,53 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					}
 				};
 
-				let sectionKey: string | false = false;
-				_.forEach(plexAllSections, (section: Record<string, any>) => {
-					if (_.isEqual(section.title, this.config.libraryName)) {
-						sectionKey = section.key;
-						return false;
+				const collections = await this.plex.getCollections();
+				const playlists = await this.plex.getPlaylists();
+
+				const sectionDataRequests: Array<Promise<any>> = [];
+				const sectionDataLibNames: string[] = [];
+				for (const libName of this.libraryNames) {
+					let sectionKey: string | false = false;
+					_.forEach(plexAllSections, (section: Record<string, any>) => {
+						if (_.isEqual(section.title, libName)) {
+							sectionKey = section.key;
+							return false;
+						}
+						return true;
+					});
+					if (sectionKey) {
+						sectionDataRequests.push(this.plex.getSectionData(sectionKey, this.displayType));
+						sectionDataLibNames.push(libName);
+					} else if (_.isEqual(libName, 'Deck')) {
+						sectionDataRequests.push(getOnDeck());
+						sectionDataLibNames.push(libName);
+					} else if (_.isEqual(libName, 'Continue Watching')) {
+						sectionDataRequests.push(getContinueWatching());
+						sectionDataLibNames.push(libName);
+					} else if (_.isEqual(libName, 'Watch Next')) {
+						sectionDataRequests.push(getWatchNext());
+						sectionDataLibNames.push(libName);
+					} else if (_.isEqual(libName, 'Recently Added')) {
+						sectionDataRequests.push(getRecentyAdded());
+						sectionDataLibNames.push(libName);
+					} else {
+						const collection = collections.find((c: any) => this.plex && _.isEqual(c.title, libName));
+						if (collection && !_.isNil(collection.key)) {
+							sectionDataRequests.push(this.plex.getCollectionData(collection.key).then((d: any) => { this.data[libName] = d; return null; }));
+							sectionDataLibNames.push('');
+						}
+						const playlist = playlists.find((p: any) => this.plex && _.isEqual(p.title, libName));
+						if (playlist && !_.isNil(playlist.key)) {
+							sectionDataRequests.push(this.plex.getPlaylistData(playlist.key).then((d: any) => { this.data[libName] = d; return null; }));
+							sectionDataLibNames.push('');
+						}
 					}
-					return true;
-				});
-				const loadDataRequests = [];
-				if (sectionKey) {
-					loadDataRequests.push(this.plex.getSectionData(sectionKey, this.displayType));
-				}
-				if (_.isEqual(this.config.libraryName, 'Deck')) {
-					loadDataRequests.push(getOnDeck());
-				} else if (_.isEqual(this.config.libraryName, 'Continue Watching')) {
-					loadDataRequests.push(getContinueWatching());
-				} else if (_.isEqual(this.config.libraryName, 'Watch Next')) {
-					loadDataRequests.push(getWatchNext());
-				} else if (_.isEqual(this.config.libraryName, 'Recently Added')) {
-					loadDataRequests.push(getRecentyAdded());
 				}
 
-				loadDataRequests.push(getLiveTV());
-				loadDataRequests.push(getEPG());
+				sectionDataRequests.push(getLiveTV());
+				sectionDataRequests.push(getEPG());
 
-				const [plexSections] = await Promise.all(loadDataRequests);
+				const sectionResults = await Promise.all(sectionDataRequests);
 				_.forEach(this.epgData, (value, key) => {
 					_.forEach(this.data[key], (libraryData, libraryKey) => {
 						if (!_.isNil(this.epgData[key][libraryData.channelCallSign])) {
@@ -581,35 +604,19 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					});
 				});
 
-				if (plexSections && sectionKey) {
-					_.forEach(plexSections, section => {
-						this.data[section.librarySectionTitle] = section.Metadata;
-					});
-				}
-				const collections = await this.plex.getCollections();
-				let collectionToGet: Record<string, any> = {};
-				_.forEach(collections, collection => {
-					if (this.plex && _.isEqual(collection.title, this.config.libraryName)) {
-						collectionToGet = collection;
+				sectionDataLibNames.forEach((libName, i) => {
+					if (!libName) return;
+					const plexSections = sectionResults[i];
+					if (plexSections) {
+						_.forEach(plexSections, (section: any) => {
+							this.data[section.librarySectionTitle] = section.Metadata;
+						});
 					}
 				});
-				if (!_.isNil(collectionToGet.key)) {
-					this.data[collectionToGet.title] = await this.plex.getCollectionData(collectionToGet.key);
-				}
 
-				const playlists = await this.plex.getPlaylists();
-				let playlistToGet: Record<string, any> = {};
-				_.forEach(playlists, playlist => {
-					if (this.plex && _.isEqual(playlist.title, this.config.libraryName)) {
-						playlistToGet = playlist;
-					}
-				});
-				if (!_.isNil(playlistToGet.key)) {
-					this.data[playlistToGet.title] = await this.plex.getPlaylistData(playlistToGet.key);
-				}
-
-				if (this.data[this.config.libraryName] === undefined) {
-					this.error = `Library name ${this.config.libraryName} does not exist.`;
+				const missing = this.libraryNames.filter(n => this.data[n] === undefined);
+				if (missing.length > 0) {
+					this.error = `Library name${missing.length > 1 ? 's' : ''} ${missing.join(', ')} do not exist.`;
 				}
 
 				this.loading = false;
@@ -648,7 +655,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.searchInputElem = document.createElement('input');
 		this.searchInputElem.type = 'text';
 		this.searchInputElem.value = this.searchValue;
-		this.searchInputElem.placeholder = `Search ${this.config.libraryName}...`;
+		this.searchInputElem.placeholder = `Search ${this.libraryNames.join(', ')}...`;
 
 		this.searchInputElem.addEventListener('keyup', () => {
 			if (!_.isEqual(this.searchInputElem.value, this.searchValue)) {
@@ -667,7 +674,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			render: boolean,
 			hasEpisodesResult: any,
 			searchValues: Array<string>,
-			itemsPerRow: number
+			itemsPerRow: number,
+			libraryData: Array<Record<string, any>>
 		): Record<string, any> => {
 			const origRenderedRows = this.renderedRows;
 			const origRenderedItems = this.renderedItems;
@@ -682,7 +690,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				(!this.maxRows || this.renderedRows <= this.maxRows);
 
 			let count = 0;
-			_.forEach(this.data[this.config.libraryName], (movieData: Record<string, any>) => {
+			_.forEach(libraryData, (movieData: Record<string, any>) => {
 				renderMore =
 					(!this.maxCount || this.renderedItems < this.maxCount) &&
 					(!this.maxRenderCount || this.renderedItems < this.maxRenderCount) &&
@@ -770,35 +778,41 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			return returnObj;
 		};
 
-		const renderMore =
-			(!this.maxCount || this.renderedItems < this.maxCount) &&
-			(!this.maxRenderCount || this.renderedItems < this.maxRenderCount) &&
-			(!this.maxRows || this.renderedRows <= this.maxRows);
-		if (
-			this.data[this.config.libraryName] &&
-			this.renderedItems < this.data[this.config.libraryName].length &&
-			renderMore
-		) {
-			let maxRenderedItems = this.data[this.config.libraryName].length;
-			let itemsPerRow = this.data[this.config.libraryName].length;
-			if (this.maxCount) {
-				maxRenderedItems = this.maxCount;
-			}
-			itemsPerRow = maxRenderedItems;
-			if (this.maxRows) {
-				itemsPerRow = Math.ceil(maxRenderedItems / this.maxRows);
-			}
-			const searchValues = _.split(this.searchValue, ' ');
+		const searchValues = _.split(this.searchValue, ' ');
+		for (const libName of this.libraryNames) {
+			const libData = this.data[libName];
+			if (!libData || libData.length === 0) continue;
 
-			const hasEpisodesResult = hasEpisodes(this.data[this.config.libraryName]);
-
-			const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow);
-			itemsPerRow = renderedItems;
-			if (this.maxRows) {
-				itemsPerRow = Math.ceil(renderedItems / this.maxRows);
+			if (this.libraryNames.length > 1) {
+				const label = document.createElement('div');
+				label.style.cssText = 'color: rgba(255,255,255,0.6); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 2px 4px; flex-shrink: 0; align-self: flex-end;';
+				label.textContent = libName;
+				this.contentContainer.appendChild(label);
 			}
 
-			renderElements(true, hasEpisodesResult, searchValues, itemsPerRow);
+			const renderMore =
+				(!this.maxCount || this.renderedItems < this.maxCount) &&
+				(!this.maxRenderCount || this.renderedItems < this.maxRenderCount) &&
+				(!this.maxRows || this.renderedRows <= this.maxRows);
+			if (this.renderedItems < libData.length && renderMore) {
+				let maxRenderedItems = libData.length;
+				let itemsPerRow = libData.length;
+				if (this.maxCount) {
+					maxRenderedItems = this.maxCount;
+				}
+				itemsPerRow = maxRenderedItems;
+				if (this.maxRows) {
+					itemsPerRow = Math.ceil(maxRenderedItems / this.maxRows);
+				}
+
+				const hasEpisodesResult = hasEpisodes(libData);
+				const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow, libData);
+				itemsPerRow = renderedItems;
+				if (this.maxRows) {
+					itemsPerRow = Math.ceil(renderedItems / this.maxRows);
+				}
+				renderElements(true, hasEpisodesResult, searchValues, itemsPerRow, libData);
+			}
 		}
 
 		const contentbg = this.getElementsByClassName('contentbg')[0] as HTMLElement;
@@ -806,7 +820,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 	};
 
 	renderPage = (): void => {
-		this.searchInputElem.placeholder = `Search ${this.config.libraryName}...`;
+		this.searchInputElem.placeholder = `Search ${this.libraryNames.join(', ')}...`;
 		if (this.showSearch) {
 			this.searchInputElem.style.display = 'block';
 		} else {
@@ -925,8 +939,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		if (this.error !== '') {
 			this.content.innerHTML += `Error: ${this.error}`;
-		} else if (this.data[this.config.libraryName] && this.data[this.config.libraryName].length === 0) {
-			this.content.innerHTML += `Library ${escapeHtml(this.config.libraryName)} has no items.`;
+		} else if (this.libraryNames.every(n => this.data[n] && this.data[n].length === 0)) {
+			this.content.innerHTML += `Libraries have no items.`;
 		} else if (this.loading) {
 			this.content.style.padding = '16px 16px 16px';
 			this.content.appendChild(spinner);
@@ -1292,14 +1306,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 				#${MODAL_ID} .pmSeasonTab:hover { border-color: white; color: white; }
 				#${MODAL_ID} .pmSeasonTab.active { background: orange; border-color: orange; color: black; font-weight: bold; }
-				#${MODAL_ID} .pmEpsSection { flex: 1; overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+				#${MODAL_ID} .pmEpsSection { flex: 1; overflow-x: auto; overflow-y: hidden; min-height: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+				#${MODAL_ID} .pmEpsSection::-webkit-scrollbar { display: none; }
 				#${MODAL_ID} .pmEpsRow {
 					display: flex; flex-direction: row; gap: 10px;
-					padding: 4px 16px 16px; overflow-x: auto;
-					-webkit-overflow-scrolling: touch;
-					scrollbar-width: none;
+					padding: 4px 16px 16px;
 				}
-				#${MODAL_ID} .pmEpsRow::-webkit-scrollbar { display: none; }
 				#${MODAL_ID} .pmEpCard { flex-shrink: 0; width: 150px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 				@media (min-width: 480px) {
 					#${MODAL_ID} .pmEpCard { width: 180px; }
@@ -2843,6 +2855,9 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			throw new Error('You need to define at least one supported entity');
 		}
 		this.config = config;
+		this.libraryNames = Array.isArray(config.libraryName)
+			? config.libraryName
+			: [config.libraryName];
 		if (config.protocol) {
 			this.plexProtocol = config.protocol;
 		}
