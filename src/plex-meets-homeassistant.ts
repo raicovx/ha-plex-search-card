@@ -675,7 +675,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			hasEpisodesResult: any,
 			searchValues: Array<string>,
 			itemsPerRow: number,
-			libraryData: Array<Record<string, any>>
+			libraryData: Array<Record<string, any>>,
+			targetRow: HTMLElement
 		): Record<string, any> => {
 			const origRenderedRows = this.renderedRows;
 			const origRenderedItems = this.renderedItems;
@@ -728,7 +729,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 						count += 1; // keeps track of already rendered items for progressive scroll
 						if (count > this.renderedItems) {
 							if (render) {
-								this.contentContainer.appendChild(movieElem);
+								targetRow.appendChild(movieElem);
 							}
 							if (this.useHorizontalScroll) {
 								if (this.renderedItems > 0 && this.renderedItems % itemsPerRow === 0) {
@@ -783,12 +784,20 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			const libData = this.data[libName];
 			if (!libData || libData.length === 0) continue;
 
+			const libSection = document.createElement('div');
+			libSection.style.cssText = 'display: flex; flex-direction: column; min-width: 0;';
+
 			if (this.libraryNames.length > 1) {
 				const label = document.createElement('div');
-				label.style.cssText = 'color: rgba(255,255,255,0.6); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 2px 4px; flex-shrink: 0; align-self: flex-end;';
+				label.style.cssText = 'color: rgba(255,255,255,0.6); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 2px 4px;';
 				label.textContent = libName;
-				this.contentContainer.appendChild(label);
+				libSection.appendChild(label);
 			}
+
+			const libRow = document.createElement('div');
+			libRow.className = 'libraryRow';
+			libSection.appendChild(libRow);
+			this.contentContainer.appendChild(libSection);
 
 			const renderMore =
 				(!this.maxCount || this.renderedItems < this.maxCount) &&
@@ -806,12 +815,12 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}
 
 				const hasEpisodesResult = hasEpisodes(libData);
-				const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow, libData);
+				const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
 				itemsPerRow = renderedItems;
 				if (this.maxRows) {
 					itemsPerRow = Math.ceil(renderedItems / this.maxRows);
 				}
-				renderElements(true, hasEpisodesResult, searchValues, itemsPerRow, libData);
+				renderElements(true, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
 			}
 		}
 

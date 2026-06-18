@@ -429,8 +429,15 @@ style.textContent = css`
 	}
 	.contentContainer {
 		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.libraryRow {
+		display: flex;
 		flex-wrap: nowrap;
 		overflow-x: auto;
+		gap: 10px;
+		padding-bottom: 4px;
 	}
 	.movieElem {
 		margin-bottom: 5px;
