@@ -1192,8 +1192,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					position: relative;
 					width: 100%;
 					max-width: 860px;
-					max-height: 92vh;
-					max-height: 92dvh;
+					height: 92vh;
+					height: 92dvh;
 					background: #181818;
 					border-radius: 16px 16px 0 0;
 					overflow: hidden;
@@ -1206,14 +1206,18 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				@media (min-height: 500px) {
 					#${MODAL_ID} .pmPanel {
 						width: min(92%, 860px);
+						height: auto;
+						max-height: 92dvh;
 						border-radius: 12px;
 						box-shadow: 0 8px 40px rgba(0,0,0,0.8);
 					}
 				}
 				#${MODAL_ID} .pmBackdrop {
-					position: absolute; top: 0; left: 0; right: 0; height: 160px;
+					position: absolute; top: 0; left: 0; right: 0; bottom: 0;
 					background-size: cover; background-position: center top;
-					opacity: 0.2; pointer-events: none;
+					opacity: 0.25; pointer-events: none;
+					-webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 75%);
+					mask-image: linear-gradient(to bottom, black 30%, transparent 75%);
 				}
 				#${MODAL_ID} .pmClose {
 					position: absolute; top: 10px; right: 12px; z-index: 10;
@@ -1547,7 +1551,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			}
 		}
 
-		if (!modal.classList.contains('active')) return;
+		if (!(modal as HTMLDialogElement).open) return;
 
 		if (!_.isEmpty(childrenData)) {
 			const firstType = _.get(childrenData[0], 'type');
