@@ -799,33 +799,41 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			libSection.appendChild(libRow);
 			this.contentContainer.appendChild(libSection);
 
-			const renderMore =
-				(!this.maxCount || this.renderedItems < this.maxCount) &&
-				(!this.maxRenderCount || this.renderedItems < this.maxRenderCount) &&
-				(!this.maxRows || this.renderedRows <= this.maxRows);
-			if (this.renderedItems < libData.length && renderMore) {
-				let maxRenderedItems = libData.length;
-				let itemsPerRow = libData.length;
-				if (this.maxCount) {
-					maxRenderedItems = this.maxCount;
-				}
-				itemsPerRow = maxRenderedItems;
-				if (this.maxRows) {
-					itemsPerRow = Math.ceil(maxRenderedItems / this.maxRows);
-				}
+			// reset per-library so each library renders independently
+			this.renderedItems = 0;
+			this.renderedRows = 0;
+			this.columnsCount = 0;
+			this.maxRenderCount = false;
 
-				const hasEpisodesResult = hasEpisodes(libData);
-				const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
-				itemsPerRow = renderedItems;
-				if (this.maxRows) {
-					itemsPerRow = Math.ceil(renderedItems / this.maxRows);
-				}
-				renderElements(true, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
+			let maxRenderedItems = libData.length;
+			let itemsPerRow = libData.length;
+			if (this.maxCount) {
+				maxRenderedItems = this.maxCount;
 			}
+			itemsPerRow = maxRenderedItems;
+			if (this.maxRows) {
+				itemsPerRow = Math.ceil(maxRenderedItems / this.maxRows);
+			}
+
+			const hasEpisodesResult = hasEpisodes(libData);
+			const { renderedItems } = renderElements(false, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
+			itemsPerRow = renderedItems;
+			if (this.maxRows) {
+				itemsPerRow = Math.ceil(renderedItems / this.maxRows);
+			}
+			renderElements(true, hasEpisodesResult, searchValues, itemsPerRow, libData, libRow);
 		}
 
 		const contentbg = this.getElementsByClassName('contentbg')[0] as HTMLElement;
 		this.contentBGHeight = getHeight(contentbg);
+
+		// lock min-height after initial render so searching doesn't collapse the card
+		if (_.isEmpty(this.searchValue) && this.contentContainer && !this.contentContainer.style.minHeight) {
+			const h = this.contentContainer.getBoundingClientRect().height;
+			if (h > 0) {
+				this.contentContainer.style.minHeight = `${h}px`;
+			}
+		}
 	};
 
 	renderPage = (): void => {
