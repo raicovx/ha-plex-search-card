@@ -526,6 +526,47 @@ class Plex {
 		return onDeckData;
 	};
 
+	getBestLocalHttpsURI = async (): Promise<string | null> => {
+		try {
+			const url = `https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1&X-Plex-Token=${this.token}`;
+			const result = await axios.get(url, { timeout: this.requestTimeout });
+			const resources: Array<Record<string, any>> = result.data;
+			// Match by configured IP/hostname so we pick the right server
+			const currentHost = this.ip.toLowerCase();
+			const server = resources.find(r => {
+				if (r.provides !== 'server') return false;
+				return Array.isArray(r.connections) &&
+					r.connections.some((c: Record<string, any>) =>
+						c.address && c.address.toLowerCase() === currentHost
+					);
+			});
+			if (!server || !Array.isArray(server.connections)) return null;
+			// Prefer local HTTPS, then relay HTTPS
+			const localHttps = server.connections.find(
+				(c: Record<string, any>) => c.local && c.protocol === 'https'
+			);
+			if (localHttps) return localHttps.uri;
+			const relayHttps = server.connections.find(
+				(c: Record<string, any>) => c.relay && c.protocol === 'https'
+			);
+			if (relayHttps) return relayHttps.uri;
+		} catch (_err) {
+			// fall through — caller will use configured URL
+		}
+		return null;
+	};
+
+	setBaseFromURI = (uri: string): void => {
+		try {
+			const u = new URL(uri);
+			this.protocol = u.protocol.replace(':', '') as 'http' | 'https';
+			this.ip = u.hostname;
+			this.port = u.port ? parseInt(u.port, 10) : false;
+		} catch (_e) {
+			// malformed URI — leave as-is
+		}
+	};
+
 	getBasicURL = (): string => {
 		return `${this.protocol}://${this.ip}${this.port === false ? '' : `:${this.port}`}`;
 	};

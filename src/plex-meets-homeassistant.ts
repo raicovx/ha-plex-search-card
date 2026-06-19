@@ -458,6 +458,16 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				if (this.playController) {
 					await this.playController.init();
 				}
+				// When page is HTTPS and local Plex is plain HTTP, resolve a *.plex.direct
+				// HTTPS URL from plex.tv before making any direct Plex requests — otherwise
+				// the browser blocks them as mixed content
+				if (window.location.protocol === 'https:' && this.plex.protocol !== 'https') {
+					const bestURI = await this.plex.getBestLocalHttpsURI();
+					if (bestURI) {
+						this.plex.setBaseFromURI(bestURI);
+					}
+				}
+
 				await this.plex.init();
 				const plexAllSections = await this.plex.getSections();
 
@@ -2973,9 +2983,13 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.remotePort = this.plexPort;
 		this.remoteProtocol = this.plexProtocol;
 
-		const startIp = this.localIp ? this.localIp : this.config.ip;
-		const startPort = this.localIp ? this.localPort : this.plexPort;
-		const startProtocol = this.localIp ? this.localProtocol : this.plexProtocol;
+		// Skip HTTP local when page is HTTPS — mixed content would be blocked
+		const pageIsHttps = window.location.protocol === 'https:';
+		const useLocal = this.localIp && !(pageIsHttps && this.localProtocol !== 'https');
+
+		const startIp = useLocal ? this.localIp : this.config.ip;
+		const startPort = useLocal ? this.localPort : this.plexPort;
+		const startProtocol = useLocal ? this.localProtocol : this.plexProtocol;
 		this.plex = new Plex(startIp, startPort, this.config.token, startProtocol, this.config.sort);
 		this.data = {};
 		this.error = '';
