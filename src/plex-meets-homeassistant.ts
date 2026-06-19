@@ -49,6 +49,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	remoteProtocol: 'http' | 'https' = 'http';
 
+	localHaDomain: string | false = false;
+
 	displayType: string | false = false;
 
 	libraryNames: string[] = [];
@@ -458,11 +460,16 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				if (this.playController) {
 					await this.playController.init();
 				}
-				// When page is HTTPS and local Plex is plain HTTP, resolve a *.plex.direct
-				// HTTPS URL from plex.tv before making any direct Plex requests — otherwise
-				// the browser blocks them as mixed content
-				if (window.location.protocol === 'https:' && this.plex.protocol !== 'https') {
-					const bestURI = await this.plex.getBestLocalHttpsURI();
+				// Always resolve the best Plex connection from plex.tv before making
+				// any direct Plex requests. Picks local connection when on localHaDomain,
+				// relay/remote otherwise, respecting the configured protocol preference.
+				if (this.plex) {
+					const currentHostname = window.location.hostname;
+					const onLocalDomain = this.localHaDomain
+						? currentHostname === this.localHaDomain || currentHostname.endsWith(`.${this.localHaDomain}`)
+						: !!this.localIp;
+					const preferProtocol = (onLocalDomain ? this.localProtocol : this.plexProtocol) as 'http' | 'https';
+					const bestURI = await this.plex.getBestConnectionURI(onLocalDomain, preferProtocol);
 					if (bestURI) {
 						this.plex.setBaseFromURI(bestURI);
 					}
@@ -637,7 +644,10 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				}, 250);
 			}
 		} catch (err) {
+			// Legacy fallback: only probe remote if no localHaDomain is set
+			// (when localHaDomain is set, domain-based selection already chose the right endpoint)
 			if (
+				!this.localHaDomain &&
 				this.remoteIp &&
 				this.plex &&
 				(_.includes(err.message, 'Network Error') || _.includes(err.message, 'Failed to fetch'))
@@ -2977,15 +2987,22 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.localIp = config.localIp && !_.isEqual(config.localIp, '') ? config.localIp : false;
 		this.localPort = config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
 		this.localProtocol = config.localProtocol === 'https' ? 'https' : 'http';
+		this.localHaDomain = config.localHaDomain && !_.isEqual(config.localHaDomain, '') ? config.localHaDomain : false;
 
-		// stash remote so we can fall back to it if local fails
+		// Determine whether we're on the local HA domain or remote (e.g. Nabu Casa)
+		const currentHostname = window.location.hostname;
+		const onLocalDomain = this.localHaDomain
+			? currentHostname === this.localHaDomain || currentHostname.endsWith(`.${this.localHaDomain}`)
+			: false;
+
+		// stash both endpoints so renderInitialData can pick the right one
 		this.remoteIp = this.config.ip;
 		this.remotePort = this.plexPort;
 		this.remoteProtocol = this.plexProtocol;
 
-		// Skip HTTP local when page is HTTPS — mixed content would be blocked
-		const pageIsHttps = window.location.protocol === 'https:';
-		const useLocal = this.localIp && !(pageIsHttps && this.localProtocol !== 'https');
+		// Use local Plex when on the local HA domain and localIp is configured;
+		// fall back to remote (ip/port/protocol from config) otherwise
+		const useLocal = this.localIp && (onLocalDomain || !this.localHaDomain);
 
 		const startIp = useLocal ? this.localIp : this.config.ip;
 		const startPort = useLocal ? this.localPort : this.plexPort;

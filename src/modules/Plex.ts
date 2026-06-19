@@ -526,34 +526,45 @@ class Plex {
 		return onDeckData;
 	};
 
-	getBestLocalHttpsURI = async (): Promise<string | null> => {
+	getBestConnectionURI = async (preferLocal: boolean, preferProtocol: 'http' | 'https'): Promise<string | null> => {
 		try {
 			const url = `https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1&X-Plex-Token=${this.token}`;
 			const result = await axios.get(url, { timeout: this.requestTimeout });
 			const resources: Array<Record<string, any>> = result.data;
-			// Match by configured IP/hostname so we pick the right server
+
+			// Match server by configured IP, fall back to first available server
+			const servers = resources.filter(r => r.provides === 'server' && Array.isArray(r.connections));
+			if (servers.length === 0) return null;
 			const currentHost = this.ip.toLowerCase();
-			const server = resources.find(r => {
-				if (r.provides !== 'server') return false;
-				return Array.isArray(r.connections) &&
-					r.connections.some((c: Record<string, any>) =>
-						c.address && c.address.toLowerCase() === currentHost
-					);
-			});
-			if (!server || !Array.isArray(server.connections)) return null;
-			// Prefer local HTTPS, then relay HTTPS
-			const localHttps = server.connections.find(
-				(c: Record<string, any>) => c.local && c.protocol === 'https'
+			const server =
+				servers.find(s => s.connections.some((c: Record<string, any>) =>
+					c.address && c.address.toLowerCase() === currentHost
+				)) || servers[0];
+
+			const connections: Array<Record<string, any>> = server.connections;
+
+			const local = connections.filter(c => c.local && !c.relay);
+			const relay = connections.filter(c => c.relay);
+			const remote = connections.filter(c => !c.local && !c.relay);
+
+			// Ordered candidate pools: prefer location match, then fallback pool
+			const primary = preferLocal ? local : [...remote, ...relay];
+			const fallback = preferLocal ? [...relay, ...remote] : local;
+
+			const pick = (pool: Array<Record<string, any>>, proto: string): string | null =>
+				pool.find(c => c.protocol === proto)?.uri ?? null;
+
+			const altProtocol = preferProtocol === 'https' ? 'http' : 'https';
+			return (
+				pick(primary, preferProtocol) ||
+				pick(primary, altProtocol) ||
+				pick(fallback, preferProtocol) ||
+				pick(fallback, altProtocol) ||
+				null
 			);
-			if (localHttps) return localHttps.uri;
-			const relayHttps = server.connections.find(
-				(c: Record<string, any>) => c.relay && c.protocol === 'https'
-			);
-			if (relayHttps) return relayHttps.uri;
 		} catch (_err) {
-			// fall through — caller will use configured URL
+			return null;
 		}
-		return null;
 	};
 
 	setBaseFromURI = (uri: string): void => {
