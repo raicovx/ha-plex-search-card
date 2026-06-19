@@ -549,21 +549,40 @@ class Plex {
 			const relay = connections.filter(c => c.relay);
 			const remote = connections.filter(c => !c.local && !c.relay);
 
+			console.log('[plex-meets-ha] connection resolution', {
+				preferLocal,
+				preferProtocol,
+				local: local.map(c => c.uri),
+				relay: relay.map(c => c.uri),
+				remote: remote.map(c => c.uri),
+			});
+
 			// Ordered candidate pools: prefer location match, then fallback pool
 			const primary = preferLocal ? local : [...remote, ...relay];
 			const fallback = preferLocal ? [...relay, ...remote] : local;
 
+			// Within a pool, sort so the configured IP address comes first
+			const sortByConfiguredIp = (pool: Array<Record<string, any>>): Array<Record<string, any>> => {
+				return [...pool].sort((a, b) => {
+					const aMatch = a.address === currentHost ? -1 : 0;
+					const bMatch = b.address === currentHost ? -1 : 0;
+					return aMatch - bMatch;
+				});
+			};
+
 			const pick = (pool: Array<Record<string, any>>, proto: string): string | null =>
-				pool.find(c => c.protocol === proto)?.uri ?? null;
+				sortByConfiguredIp(pool).find(c => c.protocol === proto)?.uri ?? null;
 
 			const altProtocol = preferProtocol === 'https' ? 'http' : 'https';
-			return (
+			const chosen = (
 				pick(primary, preferProtocol) ||
 				pick(primary, altProtocol) ||
 				pick(fallback, preferProtocol) ||
 				pick(fallback, altProtocol) ||
 				null
 			);
+			console.log('[plex-meets-ha] chosen URI:', chosen);
+			return chosen;
 		} catch (_err) {
 			return null;
 		}
