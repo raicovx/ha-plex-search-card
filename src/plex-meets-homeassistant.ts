@@ -51,6 +51,8 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 	localHaDomain: string | false = false;
 
+	clientIdentifier: string = '';
+
 	displayType: string | false = false;
 
 	libraryNames: string[] = [];
@@ -469,7 +471,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 						? currentHostname === this.localHaDomain || currentHostname.endsWith(`.${this.localHaDomain}`)
 						: !!this.localIp;
 					const preferProtocol = (onLocalDomain ? this.localProtocol : this.plexProtocol) as 'http' | 'https';
-					const bestURI = await this.plex.getBestConnectionURI(onLocalDomain, preferProtocol);
+					const bestURI = await this.plex.getBestConnectionURI(onLocalDomain, preferProtocol, this.clientIdentifier);
 					if (bestURI) {
 						this.plex.setBaseFromURI(bestURI);
 					}
@@ -2988,6 +2990,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		this.localPort = config.localPort && !_.isEqual(config.localPort, '') ? config.localPort : false;
 		this.localProtocol = config.localProtocol === 'https' ? 'https' : 'http';
 		this.localHaDomain = config.localHaDomain && !_.isEqual(config.localHaDomain, '') ? config.localHaDomain : false;
+		this.clientIdentifier = config.clientIdentifier || '';
 
 		// Determine whether we're on the local HA domain or remote (e.g. Nabu Casa)
 		const currentHostname = window.location.hostname;

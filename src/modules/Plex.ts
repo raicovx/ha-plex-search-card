@@ -526,22 +526,24 @@ class Plex {
 		return onDeckData;
 	};
 
-	getBestConnectionURI = async (preferLocal: boolean, preferProtocol: 'http' | 'https'): Promise<string | null> => {
+	getBestConnectionURI = async (preferLocal: boolean, preferProtocol: 'http' | 'https', clientIdentifier: string): Promise<string | null> => {
 		try {
-			const url = `https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1&X-Plex-Token=${this.token}`;
+			const url = `https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1&X-Plex-Token=${this.token}&X-Plex-Client-Identifier=${encodeURIComponent(clientIdentifier)}`;
 			const result = await axios.get(url, { timeout: this.requestTimeout });
 			const resources: Array<Record<string, any>> = result.data;
 
 			// Match server by configured IP, fall back to first available server
 			const servers = resources.filter(r => r.provides === 'server' && Array.isArray(r.connections));
 			if (servers.length === 0) return null;
+
+			const normaliseConnections = (s: Record<string, any>): Array<Record<string, any>> => s.connections ?? [];
 			const currentHost = this.ip.toLowerCase();
 			const server =
-				servers.find(s => s.connections.some((c: Record<string, any>) =>
+				servers.find(s => normaliseConnections(s).some((c: Record<string, any>) =>
 					c.address && c.address.toLowerCase() === currentHost
 				)) || servers[0];
 
-			const connections: Array<Record<string, any>> = server.connections;
+			const connections = normaliseConnections(server);
 
 			const local = connections.filter(c => c.local && !c.relay);
 			const relay = connections.filter(c => c.relay);
