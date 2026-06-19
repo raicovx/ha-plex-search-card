@@ -1529,7 +1529,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 			this.playController.setPlayActionButtonType(data.type);
 			const services = this.playController.getAllPlayServices(data);
 
-			if (services.length <= 1) {
+			if (services.length === 0) {
 				const playActionBtn = this.playController.getPlayActionButton();
 				playActionBtn.addEventListener('click', (e: MouseEvent) => {
 					e.stopPropagation();
@@ -1667,7 +1667,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				btn.addEventListener('click', (e: MouseEvent) => {
 					e.stopPropagation();
 					if (!this.playController) return;
-					if (services.length <= 1) {
+					if (services.length === 0) {
 						this.playController.play(ep, true);
 					} else {
 						epDevicePicker.classList.toggle('open');
@@ -1676,21 +1676,19 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 				area.appendChild(btn);
 				thumbDiv.appendChild(area);
 
-				if (services.length > 1) {
-					_.forEach(services, service => {
-						if (!this.playController) return;
-						const label = this.playController.getEntityLabel(service);
-						const devBtn = document.createElement('button');
-						devBtn.className = 'pmDeviceBtn';
-						devBtn.innerHTML = escapeHtml(label);
-						devBtn.addEventListener('click', (e: MouseEvent) => {
-							e.stopPropagation();
-							if (this.playController) this.playController.playToEntity(ep, service, true);
-							epDevicePicker.classList.remove('open');
-						});
-						epDevicePicker.appendChild(devBtn);
+				_.forEach(services, service => {
+					if (!this.playController) return;
+					const label = this.playController.getEntityLabel(service);
+					const devBtn = document.createElement('button');
+					devBtn.className = 'pmDeviceBtn';
+					devBtn.innerHTML = escapeHtml(label);
+					devBtn.addEventListener('click', (e: MouseEvent) => {
+						e.stopPropagation();
+						if (this.playController) this.playController.playToEntity(ep, service, true);
+						epDevicePicker.classList.remove('open');
 					});
-				}
+					epDevicePicker.appendChild(devBtn);
+				});
 			}
 
 			card.appendChild(thumbDiv);
