@@ -469,7 +469,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					const currentHostname = window.location.hostname;
 					const onLocalDomain = this.localHaDomain
 						? currentHostname === this.localHaDomain || currentHostname.endsWith(`.${this.localHaDomain}`)
-						: !!this.localIp;
+						: false;
 					const preferProtocol = (onLocalDomain ? this.localProtocol : this.plexProtocol) as 'http' | 'https';
 					const bestURI = await this.plex.getBestConnectionURI(onLocalDomain, preferProtocol, this.clientIdentifier);
 					if (bestURI) {
@@ -3005,7 +3005,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 		// Use local Plex when on the local HA domain and localIp is configured;
 		// fall back to remote (ip/port/protocol from config) otherwise
-		const useLocal = this.localIp && (onLocalDomain || !this.localHaDomain);
+		const useLocal = this.localIp && onLocalDomain;
 
 		const startIp = useLocal ? this.localIp : this.config.ip;
 		const startPort = useLocal ? this.localPort : this.plexPort;

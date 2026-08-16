@@ -543,7 +543,11 @@ class Plex {
 					c.address && c.address.toLowerCase() === currentHost
 				)) || servers[0];
 
-			const connections = normaliseConnections(server);
+			// If this page was itself loaded over HTTPS, the browser will block any
+			// plain-HTTP request as mixed content regardless of local/relay/remote —
+			// so drop http:// candidates entirely rather than let them be picked and fail.
+			const pageIsHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+			const connections = normaliseConnections(server).filter(c => !pageIsHttps || c.protocol === 'https');
 
 			const local = connections.filter(c => c.local && !c.relay);
 			const relay = connections.filter(c => c.relay);
