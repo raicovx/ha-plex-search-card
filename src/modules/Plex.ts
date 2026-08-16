@@ -587,7 +587,8 @@ class Plex {
 			);
 			console.log('[plex-meets-ha] chosen URI:', chosen);
 			return chosen;
-		} catch (_err) {
+		} catch (err) {
+			console.warn('[plex-meets-ha] connection resolution failed, keeping current URI:', err);
 			return null;
 		}
 	};
