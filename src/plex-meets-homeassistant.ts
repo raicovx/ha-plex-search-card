@@ -1553,7 +1553,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 
 			if (services.length === 0) {
 				const playActionBtn = this.playController.getPlayActionButton();
-				playActionBtn.addEventListener('click', (e: MouseEvent) => {
+				this.playController.setPlayButtonClickFunction((e: MouseEvent) => {
 					e.stopPropagation();
 					if (this.playController) this.playController.play(data, true);
 				});
@@ -1577,7 +1577,7 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 					devicePicker.appendChild(btn);
 				});
 
-				playActionBtn.addEventListener('click', (e: MouseEvent) => {
+				this.playController.setPlayButtonClickFunction((e: MouseEvent) => {
 					e.stopPropagation();
 					devicePicker.classList.toggle('open');
 				});

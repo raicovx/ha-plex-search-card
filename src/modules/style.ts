@@ -493,11 +493,11 @@ style.textContent = css`
 		background: rgba(0, 0, 0, 0.3);
 	}
 
-	.movieElem .interactiveArea button[name='playButton'].touchDevice,
-	.seasonElem .interactiveArea button[name='playButton'].touchDevice,
 	button[name='playButton'].disabled {
 		display: none !important;
 	}
+	.movieElem .interactiveArea button[name='playButton'].touchDevice,
+	.seasonElem .interactiveArea button[name='playButton'].touchDevice,
 	.episodeElem .interactiveArea button[name='playButton'].touchDevice {
 		display: block;
 		outline: 0;
