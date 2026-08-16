@@ -529,8 +529,12 @@ class Plex {
 	getBestConnectionURI = async (preferLocal: boolean, preferProtocol: 'http' | 'https', clientIdentifier: string): Promise<string | null> => {
 		try {
 			const url = `https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1&X-Plex-Token=${this.token}&X-Plex-Client-Identifier=${encodeURIComponent(clientIdentifier)}`;
-			const result = await axios.get(url, { timeout: this.requestTimeout });
-			const resources: Array<Record<string, any>> = result.data;
+			// plex.tv defaults to XML unless explicitly asked for JSON
+			const result = await axios.get(url, {
+				timeout: this.requestTimeout,
+				headers: { Accept: 'application/json' }
+			});
+			const resources: Array<Record<string, any>> = Array.isArray(result.data) ? result.data : [];
 
 			// Match server by configured IP, fall back to first available server
 			const servers = resources.filter(r => r.provides === 'server' && Array.isArray(r.connections));
