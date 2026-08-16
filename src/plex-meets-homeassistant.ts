@@ -17,7 +17,6 @@ import {
 	hasEpisodes,
 	getOldPlexServerErrorMessage,
 	getDetailsBottom,
-	clickHandler,
 	fetchEntityRegistry,
 	getWidth,
 	createTrackView
@@ -2773,29 +2772,6 @@ class PlexMeetsHomeAssistant extends HTMLElement {
 		}
 
 		interactiveArea.className = 'interactiveArea';
-
-		if (this.playController) {
-			const playButton = this.playController.getPlayButton(data.type);
-			if (this.playController.isPlaySupported(data)) {
-				playButton.classList.remove('disabled');
-			}
-			interactiveArea.append(playButton);
-
-			clickHandler(
-				playButton,
-				(event: any): void => {
-					event.stopPropagation();
-
-					if (this.hassObj && this.playController) {
-						this.playController.play(data, true);
-					}
-				},
-				(event: any): void => {
-					console.log('Play version... will be here!');
-					event.stopPropagation();
-				}
-			);
-		}
 
 		movieElem.append(interactiveArea);
 
